@@ -83,5 +83,4 @@ spec:
 
 At the moment the policy does not support the following Kubernetes extensions:
 
-- [quantity](https://pkg.go.dev/k8s.io/apiserver/pkg/cel/library#Quantity)
 - [authz](https://pkg.go.dev/k8s.io/apiserver/pkg/cel/library#Authz)
