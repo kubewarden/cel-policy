@@ -1,0 +1,45 @@
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+name: Release policy
+
+jobs:
+  test:
+    name: run tests and linters
+    uses: ./.github/workflows/test.yml
+
+  release:
+    runs-on: ubuntu-latest
+    needs: test
+
+    permissions:
+      # Required to create GH releases
+      contents: write
+      # Required to push to GHCR
+      packages: write
+      # Required by cosign keyless signing
+      id-token: write
+
+    steps:
+      - name: Install dependencies
+        uses: kubewarden/github-actions/policy-gh-action-dependencies@v3.1.15
+
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version: "1.21"
+
+      - run: make annotated-policy.wasm
+      - name: Run e2e tests
+        run: |
+          make e2e-tests
+
+      - name: Release
+        uses: kubewarden/github-actions/policy-release@v3.1.15
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          oci-target: ghcr.io/${{ github.repository_owner }}/policies/cel-policy
