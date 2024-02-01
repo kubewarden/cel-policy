@@ -44,8 +44,8 @@ func NewCompiler() (*Compiler, error) {
 		library.URLs(),
 		library.Regex(),
 		library.Lists(),
-		// TODO: introduce these libraries
-		// library.Quantity(),
+		library.Quantity(),
+		// TODO: introduce the Authz kubernetes extension
 		// library.Authz(),
 
 		// Variables
