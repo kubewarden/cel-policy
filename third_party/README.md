@@ -1,5 +1,8 @@
-This folder contains third-party code from [kubernetes/apiserver](https://github.com/kubernetes/apiserver).
+This folder contains third-party code from kubernetes:
 
-The current version is based on kubernetes v1.29.1 (apiserver v0.29.1).
+- [kubernetes/apiserver](https://github.com/kubernetes/apiserver).
+- [kubernetes/apimachinery](https://github.com/kubernetes/apimachinery).
 
-All code in this folder is licensed under the Apache License 2.0, see [LICENSE](apiserver/LICENSE).
+The current version is based on kubernetes v1.29.1 (apiserver/apimachinery v0.29.1).
+
+All code in this folder is licensed under the Apache License 2.0, see [LICENSE](LICENSE).
