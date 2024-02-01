@@ -6,6 +6,8 @@ A meta-policy is a policy that can be configured via settings, and does not requ
 
 The settings of the policy are compliant with the [ValidatingAdmissionPolicy Kubernetes resource](https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/),
 please refer to [writing a policy](#writing-a-policy) for more information on what fields are supported.
+Under the hood, the policy uses [CEL](https://github.com/google/cel-go) and [Kubernetes CEL libraries](https://pkg.go.dev/k8s.io/apiserver/pkg/cel/library),
+this allows to use the same CEL syntax and functions that are available in Kubernetes.
 
 ### Writing a policy
 
