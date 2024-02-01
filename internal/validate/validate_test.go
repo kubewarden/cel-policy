@@ -161,6 +161,45 @@ func TestValidate(t *testing.T) {
 				Code:     code(400),
 			},
 		},
+		{
+			name: "test URLs library",
+			settings: settings.Settings{
+				Validations: []settings.Validation{
+					{
+						Expression: `isURL("http://www.kubewarden.io")`,
+					},
+				},
+			},
+			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
+				Accepted: true,
+			},
+		},
+		{
+			name: "test Regex library",
+			settings: settings.Settings{
+				Validations: []settings.Validation{
+					{
+						Expression: `"123 abc 456".findAll('[0-9]*', 1) == ['123']`,
+					},
+				},
+			},
+			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
+				Accepted: true,
+			},
+		},
+		{
+			name: "test Quantity library",
+			settings: settings.Settings{
+				Validations: []settings.Validation{
+					{
+						Expression: `isQuantity("20M")`,
+					},
+				},
+			},
+			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
+				Accepted: true,
+			},
+		},
 	}
 
 	// Override the host capabilities client with a mock client
