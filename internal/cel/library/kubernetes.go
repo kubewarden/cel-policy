@@ -73,7 +73,7 @@ func listAllResources(arg ref.Val) ref.Val {
 
 	var response map[string]interface{}
 	if err := json.Unmarshal(responseBytes, &response); err != nil {
-		types.NewErr("cannot unarshal Kubernetees all resources response: %s", err)
+		types.NewErr("cannot unmarshal Kubernetes all resources response: %s", err)
 	}
 
 	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
@@ -92,7 +92,7 @@ func listResourcesByNamespace(arg ref.Val) ref.Val {
 
 	var response map[string]interface{}
 	if err := json.Unmarshal(responseBytes, &response); err != nil {
-		types.NewErr("cannot unarshal Kubernetees resources by namespace response: %s", err)
+		types.NewErr("cannot unmarshal Kubernetes resources by namespace response: %s", err)
 	}
 
 	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
@@ -110,7 +110,7 @@ func getResource(arg ref.Val) ref.Val {
 		types.NewErr("cannot get Kubernetes resource: %s", err)
 	}
 	if err := json.Unmarshal(responseBytes, &response); err != nil {
-		types.NewErr("cannot unarshal Kubernetees resource response: %s", err)
+		types.NewErr("cannot unmarshal Kubernetes resource response: %s", err)
 	}
 
 	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
