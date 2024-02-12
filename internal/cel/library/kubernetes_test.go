@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLibrary(t *testing.T) {
+func TestKubernetes(t *testing.T) {
 	tests := []struct {
 		name           string
 		expression     string
