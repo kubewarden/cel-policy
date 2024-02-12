@@ -8,11 +8,8 @@ import (
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/ext"
-	"github.com/kubewarden/policy-sdk-go/pkg/capabilities"
 	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/kubernetes"
 )
-
-var host = capabilities.NewHost()
 
 type kubernetesLib struct{}
 
