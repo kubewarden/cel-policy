@@ -63,17 +63,17 @@ func (kubernetesLib) ProgramOptions() []cel.ProgramOption {
 func listAllResources(arg ref.Val) ref.Val {
 	listAllResourcesRequest, ok := arg.Value().(*kubernetes.ListAllResourcesRequest)
 	if !ok {
-		types.MaybeNoSuchOverloadErr(arg)
+		return types.MaybeNoSuchOverloadErr(arg)
 	}
 
 	responseBytes, err := kubernetes.ListResources(&host, *listAllResourcesRequest)
 	if err != nil {
-		types.NewErr("cannot list all Kubernetes resources: %s", err)
+		return types.NewErr("cannot list all Kubernetes resources: %s", err)
 	}
 
 	var response map[string]interface{}
 	if err := json.Unmarshal(responseBytes, &response); err != nil {
-		types.NewErr("cannot unmarshal Kubernetes all resources response: %s", err)
+		return types.NewErr("cannot unmarshal Kubernetes all resources response: %s", err)
 	}
 
 	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
@@ -82,17 +82,17 @@ func listAllResources(arg ref.Val) ref.Val {
 func listResourcesByNamespace(arg ref.Val) ref.Val {
 	listResourcesByNamespaceRequest, ok := arg.Value().(*kubernetes.ListResourcesByNamespaceRequest)
 	if !ok {
-		types.MaybeNoSuchOverloadErr(arg)
+		return types.MaybeNoSuchOverloadErr(arg)
 	}
 
 	responseBytes, err := kubernetes.ListResourcesByNamespace(&host, *listResourcesByNamespaceRequest)
 	if err != nil {
-		types.NewErr("cannot list Kubernetes resources by namespace: %s", err)
+		return types.NewErr("cannot list Kubernetes resources by namespace: %s", err)
 	}
 
 	var response map[string]interface{}
 	if err := json.Unmarshal(responseBytes, &response); err != nil {
-		types.NewErr("cannot unmarshal Kubernetes resources by namespace response: %s", err)
+		return types.NewErr("cannot unmarshal Kubernetes resources by namespace response: %s", err)
 	}
 
 	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
@@ -101,16 +101,16 @@ func listResourcesByNamespace(arg ref.Val) ref.Val {
 func getResource(arg ref.Val) ref.Val {
 	getResourceRequest, ok := arg.Value().(*kubernetes.GetResourceRequest)
 	if !ok {
-		types.MaybeNoSuchOverloadErr(arg)
+		return types.MaybeNoSuchOverloadErr(arg)
 	}
 
 	var response map[string]interface{}
 	responseBytes, err := kubernetes.GetResource(&host, *getResourceRequest)
 	if err != nil {
-		types.NewErr("cannot get Kubernetes resource: %s", err)
+		return types.NewErr("cannot get Kubernetes resource: %s", err)
 	}
 	if err := json.Unmarshal(responseBytes, &response); err != nil {
-		types.NewErr("cannot unmarshal Kubernetes resource response: %s", err)
+		return types.NewErr("cannot unmarshal Kubernetes resource response: %s", err)
 	}
 
 	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
