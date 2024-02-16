@@ -9,7 +9,8 @@ import (
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/ext"
-	"k8s.io/apiserver/pkg/cel/library"
+	"github.com/kubewarden/cel-policy/internal/cel/library"
+	k8sLibrary "k8s.io/apiserver/pkg/cel/library"
 )
 
 type Compiler struct {
@@ -41,10 +42,10 @@ func NewCompiler() (*Compiler, error) {
 		// Kubernetes 1.29 libraries and extensions
 		ext.Sets(),
 		ext.Strings(ext.StringsVersion(2)),
-		library.URLs(),
-		library.Regex(),
-		library.Lists(),
-		library.Quantity(),
+		k8sLibrary.URLs(),
+		k8sLibrary.Regex(),
+		k8sLibrary.Lists(),
+		k8sLibrary.Quantity(),
 		// TODO: introduce the Authz kubernetes extension
 		// library.Authz(),
 
@@ -58,6 +59,10 @@ func NewCompiler() (*Compiler, error) {
 		/// See: https://github.com/google/cel-go/issues/885
 		cel.Variable("request", cel.DynType),
 		cel.Variable("namespaceObject", cel.DynType),
+
+		// Kubewarden host capabilities libraries
+		library.Kubernetes(),
+		library.Net(),
 	)
 	if err != nil {
 		return nil, err
@@ -75,10 +80,10 @@ func (c *Compiler) CompileCELExpression(expression string) (*cel.Ast, error) {
 	return ast, nil
 }
 
-func (c *Compiler) EvalCELExpression( //nolint:ireturn
+func (c *Compiler) EvalCELExpression(
 	vars map[string]interface{}, ast *cel.Ast,
 ) (ref.Val, error) {
-	prog, err := c.env.Program(ast, cel.EvalOptions(cel.OptOptimize, cel.OptTrackCost))
+	prog, err := c.env.Program(ast, cel.EvalOptions(cel.OptOptimize))
 	if err != nil {
 		return nil, err
 	}

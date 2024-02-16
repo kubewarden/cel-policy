@@ -48,6 +48,7 @@ linters:
     - funlen
     - ifshort # deprecated
     - godox
+    - ireturn # cel-go uses a lot of interface returns
 
 linters-settings:
   cyclop:
