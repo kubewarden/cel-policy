@@ -24,6 +24,12 @@ func TestNet(t *testing.T) {
 			[]string{"192.168.0.1", "10.0.0.1"},
 			[]string{"192.168.0.1", "10.0.0.1"},
 		},
+		{
+			"kw.net.lookupHost test return type",
+			"kw.net.lookupHost('kubewarden')[0]",
+			[]string{"192.168.0.1", "10.0.0.1"},
+			"192.168.0.1",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
