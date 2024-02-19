@@ -1,6 +1,7 @@
 package library
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -95,6 +96,52 @@ func TestKubernetes(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
+func TestKubernetesHostFailure(t *testing.T) {
+	tests := []struct {
+		name        string
+		expression  string
+		errorString string
+	}{
+		{
+			"kw.k8s.listAllResources host failure",
+			"kw.k8s.listAllResources(ListAllResourcesRequest{Kind: 'Pod'})",
+			"cannot list all Kubernetes resources: hostcallback error",
+		},
+		{
+			"kw.k8s.listResourcesByNamespace",
+			"kw.k8s.listResourcesByNamespace(ListResourcesByNamespaceRequest{Namespace: 'default'})",
+			"cannot list Kubernetes resources by namespace: hostcallback error",
+		},
+		{
+			"kw.k8s.getResource",
+			"kw.k8s.getResource(GetResourceRequest{Kind: 'Pod'}).metadata.name",
+			"cannot get Kubernetes resource: hostcallback error",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var err error
+
+			host.Client = capabilities.NewFailingMockWapcClient(fmt.Errorf("hostcallback error"))
+
+			env, err := cel.NewEnv(
+				Kubernetes(),
+			)
+			require.NoError(t, err)
+
+			ast, issues := env.Compile(test.expression)
+			require.Empty(t, issues)
+
+			prog, err := env.Program(ast)
+			require.NoError(t, err)
+
+			_, _, err = prog.Eval(map[string]interface{}{})
+			require.Error(t, err)
+			require.Equal(t, test.errorString, err.Error())
 		})
 	}
 }
