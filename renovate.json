@@ -4,6 +4,7 @@
     "group:allNonMajor",
     "schedule:earlyMondays"
   ],
-  "labels": ["dependencies"]
-}
+  "labels": [
+    "dependencies"
+  ]
 }
