@@ -112,12 +112,12 @@ func TestKubernetesHostFailure(t *testing.T) {
 			"cannot list all Kubernetes resources: hostcallback error",
 		},
 		{
-			"kw.k8s.listResourcesByNamespace",
+			"kw.k8s.listResourcesByNamespace host failure",
 			"kw.k8s.listResourcesByNamespace(ListResourcesByNamespaceRequest{Namespace: 'default'})",
 			"cannot list Kubernetes resources by namespace: hostcallback error",
 		},
 		{
-			"kw.k8s.getResource",
+			"kw.k8s.getResource host failure",
 			"kw.k8s.getResource(GetResourceRequest{Kind: 'Pod'}).metadata.name",
 			"cannot get Kubernetes resource: hostcallback error",
 		},
