@@ -4,7 +4,6 @@
     api_version: v1
     kind: Namespace
     name: default
-    namespace: ""
     disable_cache: false
   response:
     type: Success
