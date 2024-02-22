@@ -29,8 +29,8 @@ func TestCrypto(t *testing.T) {
 			false,
 			"the certificate is expired",
 			map[string]any{
-				"Trusted": false,
-				"Reason":  "the certificate is expired",
+				"trusted": false,
+				"reason":  "the certificate is expired",
 			},
 		},
 		{
@@ -43,8 +43,8 @@ func TestCrypto(t *testing.T) {
 			true, // e.g: cert is past expiration date, yet is trusted (empty CertChain)
 			"",
 			map[string]any{
-				"Trusted": true,
-				"Reason":  "",
+				"trusted": true,
+				"reason":  "",
 			},
 		},
 		{
@@ -53,7 +53,7 @@ func TestCrypto(t *testing.T) {
 				"'---BEGIN CERTIFICATE---foo2---END CERTIFICATE---'," +
 				"[]," +
 				"'0004-08-15T16:23:42+00:00'" +
-				").Trusted",
+				").trusted",
 			true, // e.g: cert is past expiration date, yet is trusted (empty CertChain)
 			"",
 			true,

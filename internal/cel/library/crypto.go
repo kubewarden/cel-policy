@@ -29,8 +29,8 @@ import (
 //     If empty, certificate is assumed never expired.
 //
 // Returns a map(<string>) with 2 fields:
-//   - "Trusted": <bool> informing if certificate passed verification or not
-//   - "Reason": <string> with reason, in case "Trusted" is false
+//   - "trusted": <bool> informing if certificate passed verification or not
+//   - "reason": <string> with reason, in case "Trusted" is false
 //
 // Usage in CEL:
 //
@@ -132,7 +132,7 @@ func verifyCert(args ...ref.Val) ref.Val {
 
 	return types.NewStringInterfaceMap(types.DefaultTypeAdapter,
 		map[string]any{
-			"Trusted": response.Trusted,
-			"Reason":  response.Reason,
+			"trusted": response.Trusted,
+			"reason":  response.Reason,
 		})
 }
