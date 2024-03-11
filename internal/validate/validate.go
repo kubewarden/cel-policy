@@ -61,12 +61,8 @@ func Validate(payload []byte) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("wrong object format: metadata not found in object")
 	}
-	objectNamespace, ok := objectMeta["namespace"].(string)
-	if !ok {
-		return nil, fmt.Errorf("wrong object format: namespace not found in object")
-	}
 
-	if objectNamespace != "" {
+	if objectNamespace, ok := objectMeta["namespace"].(string); ok && objectNamespace != "" {
 		resourceRequest := kubernetes.GetResourceRequest{
 			APIVersion: "v1",
 			Kind:       "Namespace",
