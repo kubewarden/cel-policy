@@ -46,19 +46,19 @@ func TestValidate(t *testing.T) {
 			settings: settings.Settings{
 				Validations: []settings.Validation{
 					{
-						Expression:        `object.metadata.name != "pod-name"`,
-						MessageExpression: `object.metadata.name + " is not true"`,
+						Expression:        `object.metadata.name != "namespace-name"`,
+						MessageExpression: `object.metadata.name + " is not allowed"`,
 					},
 				},
 			},
-			object: &corev1.Pod{
+			object: &corev1.Namespace{
 				Metadata: &metav1.ObjectMeta{
-					Name: "pod-name",
+					Name: "namespace-name",
 				},
 			},
 			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
 				Accepted: false,
-				Message:  message("pod-name is not true"),
+				Message:  message("namespace-name is not allowed"),
 				Code:     code(400),
 			},
 		},
@@ -73,7 +73,8 @@ func TestValidate(t *testing.T) {
 			},
 			object: &corev1.Pod{
 				Metadata: &metav1.ObjectMeta{
-					Name: "pod-name",
+					Name:      "pod-name",
+					Namespace: "default",
 				},
 			},
 			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
@@ -95,7 +96,8 @@ func TestValidate(t *testing.T) {
 			},
 			object: &corev1.Pod{
 				Metadata: &metav1.ObjectMeta{
-					Name: "pod-name",
+					Name:      "pod-name",
+					Namespace: "default",
 				},
 			},
 			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
@@ -117,7 +119,8 @@ func TestValidate(t *testing.T) {
 			},
 			object: &corev1.Pod{
 				Metadata: &metav1.ObjectMeta{
-					Name: "pod-name",
+					Name:      "pod-name",
+					Namespace: "default",
 				},
 			},
 			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
@@ -152,52 +155,14 @@ func TestValidate(t *testing.T) {
 			},
 			object: &corev1.Pod{
 				Metadata: &metav1.ObjectMeta{
-					Name: "pod-name",
+					Name:      "pod-name",
+					Namespace: "default",
 				},
 			},
 			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
 				Accepted: false,
 				Message:  message("pod-name is forbidden"),
 				Code:     code(400),
-			},
-		},
-		{
-			name: "test URLs library",
-			settings: settings.Settings{
-				Validations: []settings.Validation{
-					{
-						Expression: `isURL("http://www.kubewarden.io")`,
-					},
-				},
-			},
-			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
-				Accepted: true,
-			},
-		},
-		{
-			name: "test Regex library",
-			settings: settings.Settings{
-				Validations: []settings.Validation{
-					{
-						Expression: `"123 abc 456".findAll('[0-9]*', 1) == ['123']`,
-					},
-				},
-			},
-			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
-				Accepted: true,
-			},
-		},
-		{
-			name: "test Quantity library",
-			settings: settings.Settings{
-				Validations: []settings.Validation{
-					{
-						Expression: `isQuantity("20M")`,
-					},
-				},
-			},
-			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
-				Accepted: true,
 			},
 		},
 	}

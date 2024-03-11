@@ -56,11 +56,17 @@ func Validate(payload []byte) ([]byte, error) {
 	// TODO: change this to corev1.Namespace once nested structs are supported
 	// See: https://github.com/google/cel-go/pull/892
 	var namespaceObject map[string]interface{}
-	if validationRequest.Request.Namespace != "" {
+
+	objectMeta, ok := object["metadata"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("wrong object format: metadata not found in object")
+	}
+
+	if objectNamespace, ok := objectMeta["namespace"].(string); ok && objectNamespace != "" {
 		resourceRequest := kubernetes.GetResourceRequest{
 			APIVersion: "v1",
 			Kind:       "Namespace",
-			Name:       validationRequest.Request.Namespace,
+			Name:       objectNamespace,
 		}
 
 		responseBytes, err := kubernetes.GetResource(&host, resourceRequest)
