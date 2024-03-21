@@ -71,9 +71,8 @@ func Validate(payload []byte) ([]byte, error) {
 
 		responseBytes, err := kubernetes.GetResource(&host, resourceRequest)
 		if err != nil {
-			return nil, fmt.Errorf("cannot get namespace data: %w", err)
-		}
-		if err := json.Unmarshal(responseBytes, &namespaceObject); err != nil {
+			log.Printf("Warning: cannot get namespace data: %s. `namespaceObject` cannot be populated.", err)
+		} else if err := json.Unmarshal(responseBytes, &namespaceObject); err != nil {
 			return nil, fmt.Errorf("cannot parse namespace data: %w", err)
 		}
 	}
