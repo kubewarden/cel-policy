@@ -9,6 +9,8 @@ require (
 	github.com/kubewarden/policy-sdk-go v0.8.0
 	github.com/stretchr/testify v1.8.4
 	k8s.io/apiserver v0.29.1
+	github.com/opencontainers/go-digest v1.0.0
+	github.com/opencontainers/image-spec v1.1.0
 )
 
 replace github.com/go-openapi/strfmt => github.com/kubewarden/strfmt v0.1.3
