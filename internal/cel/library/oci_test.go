@@ -8,39 +8,35 @@ import (
 
 	"github.com/google/cel-go/cel"
 	"github.com/kubewarden/policy-sdk-go/pkg/capabilities"
-	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/net"
+	manifestDigest "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/manifest_digest"
+
 	"github.com/stretchr/testify/require"
 )
 
-func TestNet(t *testing.T) {
+func TestOCIGetManifestDigest(t *testing.T) {
 	tests := []struct {
 		name           string
 		expression     string
-		response       []string
-		expectedResult interface{}
+		response       string
+		expectedResult string
 	}{
 		{
-			"kw.net.lookupHost",
-			"kw.net.lookupHost('kubewarden')",
-			[]string{"192.168.0.1", "10.0.0.1"},
-			[]string{"192.168.0.1", "10.0.0.1"},
-		},
-		{
-			"kw.net.lookupHost test return type",
-			"kw.net.lookupHost('kubewarden')[0]",
-			[]string{"192.168.0.1", "10.0.0.1"},
-			"192.168.0.1",
+			"kw.oci.getManifestDigest",
+			"kw.oci.getManifestDigest('myimage:latest')",
+			"myhash",
+			"myhash",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var err error
-
-			host.Client, err = capabilities.NewSuccessfulMockWapcClient(net.LookupHostResponse{Ips: test.response})
+			host.Client, err = capabilities.NewSuccessfulMockWapcClient(manifestDigest.OciManifestResponse{
+				Digest: test.response,
+			})
 			require.NoError(t, err)
 
 			env, err := cel.NewEnv(
-				Net(),
+				OCI(),
 			)
 			require.NoError(t, err)
 
@@ -61,24 +57,23 @@ func TestNet(t *testing.T) {
 	}
 }
 
-func TestNetHostFailure(t *testing.T) {
+func TestOCIHostFailure(t *testing.T) {
 	tests := []struct {
 		name       string
 		expression string
 	}{
 		{
-			"kw.net.lookupHost",
-			"kw.net.lookupHost('kubewarden')",
+			"kw.oci.getManifestDigest host failure",
+			"kw.oci.getManifestDigest('myimage:latest')",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var err error
-
 			host.Client = capabilities.NewFailingMockWapcClient(fmt.Errorf("hostcallback error"))
 
 			env, err := cel.NewEnv(
-				Net(),
+				OCI(),
 			)
 			require.NoError(t, err)
 
@@ -90,7 +85,7 @@ func TestNetHostFailure(t *testing.T) {
 
 			_, _, err = prog.Eval(map[string]interface{}{})
 			require.Error(t, err)
-			require.Equal(t, "cannot lookup host: hostcallback error", err.Error())
+			require.Equal(t, "cannot get oci manifest: hostcallback error", err.Error())
 		})
 	}
 }

@@ -3,12 +3,14 @@ module github.com/kubewarden/cel-policy
 go 1.21.5
 
 require (
-	github.com/google/cel-go v0.17.7
+	github.com/google/cel-go v0.20.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kubewarden/k8s-objects v1.29.0-kw1
 	github.com/kubewarden/policy-sdk-go v0.8.0
 	github.com/stretchr/testify v1.8.4
 	k8s.io/apiserver v0.29.1
+	github.com/opencontainers/go-digest v1.0.0
+	github.com/opencontainers/image-spec v1.1.0
 )
 
 replace github.com/go-openapi/strfmt => github.com/kubewarden/strfmt v0.1.3
@@ -19,6 +21,7 @@ replace k8s.io/apimachinery v0.29.1 => ./third_party/k8s.io/apimachinery/
 
 require (
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-openapi/strfmt v0.21.3 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
