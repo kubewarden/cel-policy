@@ -49,6 +49,7 @@ linters:
     - ifshort # deprecated
     - godox
     - ireturn # cel-go uses a lot of interface returns
+    - nolintlint # clashes with reformat of prettier
 
 linters-settings:
   cyclop:
