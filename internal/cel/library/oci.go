@@ -1,11 +1,14 @@
 package library
 
 import (
+	"reflect"
+
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
-
+	"github.com/google/cel-go/common/types/traits"
 	manifestDigest "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/manifest_digest"
+	verifyV2 "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/verify_v2"
 )
 
 // OCI returns a cel.EnvOption to configure OCI-related host-callback
@@ -24,6 +27,17 @@ import (
 // Example:
 //
 // kw.oci.getManifestDigest('myimage')
+//
+// # OCI.VerifyPubKeysImage
+//
+// This CEL function verifies sigstore signatures of an image using public keys.
+// Usage in CEL:
+//
+//	OCI.verifyPubKeysImage(<string>, <list<string>>, map(<string>)<string>) -> <bool, string>
+//
+// Returns a map(<string>) with 2 fields:
+//   - "trusted": <bool> informs if the image passed verification or not
+//   - "digest": <string> digest of the verified image
 
 func OCI() cel.EnvOption {
 	return cel.Lib(ociLib{})
@@ -49,6 +63,18 @@ func (ociLib) CompileOptions() []cel.EnvOption {
 				cel.UnaryBinding(getManifestDigest),
 			),
 		),
+
+		cel.Function("kw.oci.verifyPubKeysImage",
+			cel.Overload("kw_oci_verify_pub_keys_image",
+				[]*cel.Type{
+					cel.StringType,
+					cel.ListType(cel.StringType),
+					cel.MapType(cel.StringType, cel.StringType),
+				},
+				cel.DynType,
+				cel.FunctionBinding(verifyPubKeysImage),
+			),
+		),
 	}
 }
 
@@ -69,4 +95,38 @@ func getManifestDigest(arg ref.Val) ref.Val {
 	}
 
 	return types.String(digest)
+}
+func verifyPubKeysImage(args ...ref.Val) ref.Val {
+	image, ok1 := args[0].Value().(string)
+	if !ok1 {
+		return types.MaybeNoSuchOverloadErr(args[0])
+	}
+
+	pubKeys, ok2 := args[1].(traits.Lister)
+	if !ok2 {
+		return types.MaybeNoSuchOverloadErr(args[1])
+	}
+	pubKeysList, err := pubKeys.ConvertToNative(reflect.TypeOf([]string{}))
+	if err != nil {
+		return types.MaybeNoSuchOverloadErr(args[1])
+	}
+
+	annotations, ok3 := args[2].(traits.Mapper)
+	if !ok3 {
+		return types.MaybeNoSuchOverloadErr(args[2])
+	}
+	annotationsMap, err := annotations.ConvertToNative(reflect.TypeOf(map[string]string{}))
+	if err != nil {
+		return types.MaybeNoSuchOverloadErr(args[2])
+	}
+
+	response, err := verifyV2.VerifyPubKeysImage(&host, image, pubKeysList.([]string), annotationsMap.(map[string]string))
+	if err != nil {
+		return types.NewErr("cannot verify image: %s", err)
+	}
+
+	return types.NewDynamicMap(types.DefaultTypeAdapter, map[string]any{
+		"trusted": response.IsTrusted,
+		"digest":  response.Digest,
+	})
 }
