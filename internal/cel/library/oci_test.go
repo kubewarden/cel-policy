@@ -44,6 +44,51 @@ func TestOCIGetManifestDigest(t *testing.T) {
 			require.Empty(t, issues)
 
 			prog, err := env.Program(ast)
+
+func TestVerifyPubKeysImage(t *testing.T) {
+	tests := []struct {
+		name           string
+		expression     string
+		expectedResult interface{}
+	}{
+		{
+			"kw.oci.verifyPubKeysImage empty annotations",
+			"kw.oci.verifyPubKeysImage('myimage:latest', ['pubkey1', 'pubkey2'], {} )",
+			map[string]interface{}{
+				"digest":  "myhash",
+				"trusted": true,
+			},
+		},
+		{
+			"kw.oci.verifyPubKeysImage",
+			"kw.oci.verifyPubKeysImage('myimage:latest', ['pubkey1', 'pubkey2'], {'foo': 'bar'} )",
+			map[string]interface{}{
+				"digest":  "myhash",
+				"trusted": true,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var err error
+
+			host.Client, err = capabilities.NewSuccessfulMockWapcClient(
+				map[string]interface{}{
+					"is_trusted": true,
+					"digest":     "myhash",
+				},
+			)
+			require.NoError(t, err)
+
+			env, err := cel.NewEnv(
+				OCI(),
+			)
+			require.NoError(t, err)
+
+			ast, issues := env.Compile(test.expression)
+			require.Empty(t, issues)
+
+			prog, err := env.Program(ast, cel.EvalOptions(cel.OptExhaustiveEval))
 			require.NoError(t, err)
 
 			val, _, err := prog.Eval(map[string]interface{}{})
@@ -61,10 +106,17 @@ func TestOCIHostFailure(t *testing.T) {
 	tests := []struct {
 		name       string
 		expression string
+		expected   string
 	}{
 		{
 			"kw.oci.getManifestDigest host failure",
 			"kw.oci.getManifestDigest('myimage:latest')",
+			"cannot get oci manifest: hostcallback error",
+		},
+		{
+			"kw.oci.verifyPubKeysImage host failure",
+			"kw.oci.verifyPubKeysImage('myimage:latest', ['pubkey1', 'pubkey2'], {})",
+			"cannot verify image: hostcallback error",
 		},
 	}
 	for _, test := range tests {
@@ -85,7 +137,7 @@ func TestOCIHostFailure(t *testing.T) {
 
 			_, _, err = prog.Eval(map[string]interface{}{})
 			require.Error(t, err)
-			require.Equal(t, "cannot get oci manifest: hostcallback error", err.Error())
+			require.Equal(t, test.expected, err.Error())
 		})
 	}
 }
