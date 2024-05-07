@@ -38,6 +38,20 @@ import (
 // Returns a map(<string>) with 2 fields:
 //   - "trusted": <bool> informs if the image passed verification or not
 //   - "digest": <string> digest of the verified image
+//
+// # OCI.VerifyKeylessGithubActions
+//
+// Verify sigstore signatures of an image using keyless signatures made via Github
+// Actions.
+// Usage in CEL:
+//
+//	OCI.VerifyKeylessGithubActions(<string>, <string>, <string>, map(<string>)<string>) -> <bool, string>
+//
+// Arguments:
+// * `image` - image to be verified
+// * `owner` - owner of the repository. E.g: octocat
+// * `repo` - Optional. repo of the GH Action workflow that signed the artifact. E.g: example-repo. Optional.
+// * `annotations` - annotations that must have been provided by all signers when they signed the OCI artifact
 
 func OCI() cel.EnvOption {
 	return cel.Lib(ociLib{})
@@ -73,6 +87,19 @@ func (ociLib) CompileOptions() []cel.EnvOption {
 				},
 				cel.DynType,
 				cel.FunctionBinding(verifyPubKeysImage),
+			),
+		),
+
+		cel.Function("kw.oci.verifyKeylessGithubActions",
+			cel.Overload("kw_oci_verify_keyless_github_actions",
+				[]*cel.Type{
+					cel.StringType,
+					cel.StringType,
+					cel.StringType,
+					cel.MapType(cel.StringType, cel.StringType),
+				},
+				cel.DynType,
+				cel.FunctionBinding(verifyKeylessGithubActions),
 			),
 		),
 	}
@@ -121,6 +148,40 @@ func verifyPubKeysImage(args ...ref.Val) ref.Val {
 	}
 
 	response, err := verifyV2.VerifyPubKeysImage(&host, image, pubKeysList.([]string), annotationsMap.(map[string]string))
+	if err != nil {
+		return types.NewErr("cannot verify image: %s", err)
+	}
+
+	return types.NewDynamicMap(types.DefaultTypeAdapter, map[string]any{
+		"trusted": response.IsTrusted,
+		"digest":  response.Digest,
+	})
+}
+
+func verifyKeylessGithubActions(args ...ref.Val) ref.Val {
+	image, ok1 := args[0].Value().(string)
+	if !ok1 {
+		return types.MaybeNoSuchOverloadErr(args[0])
+	}
+	owner, ok2 := args[1].Value().(string)
+	if !ok2 {
+		return types.MaybeNoSuchOverloadErr(args[1])
+	}
+	// this is optional, can be empty
+	repo, ok3 := args[2].Value().(string)
+	if !ok3 {
+		return types.MaybeNoSuchOverloadErr(args[2])
+	}
+	annotations, ok4 := args[3].(traits.Mapper)
+	if !ok4 {
+		return types.MaybeNoSuchOverloadErr(args[3])
+	}
+	annotationsMap, err := annotations.ConvertToNative(reflect.TypeOf(map[string]string{}))
+	if err != nil {
+		return types.MaybeNoSuchOverloadErr(args[3])
+	}
+
+	response, err := verifyV2.VerifyKeylessGithubActions(&host, image, owner, repo, annotationsMap.(map[string]string))
 	if err != nil {
 		return types.NewErr("cannot verify image: %s", err)
 	}
