@@ -66,6 +66,20 @@ import (
 // * image: image to be verified (e.g.: `registry.testing.lan/busybox:1.0.0`)
 // * keyless: list of KeylessInfo pairs, containing Issuer and Subject info from OIDC providers
 // * annotations: annotations that must have been provided by all signers when they signed the OCI artifact
+//
+// # OCI.VerifyKeylessPrefixMatch
+//
+// Verify sigstore signatures of an image using keyless. Here, the provided
+// subject string is treated as a URL prefix, and sanitized to a valid URL on
+// itself by appending `/` to prevent typosquatting. Then, the provided subject
+// will satisfy the signature only if it is a prefix of the signature subject.
+// Usage in CEL:
+//	OCI.VerifyKeylessPrefixMatch(<string>, <list(oci.KeylessPrefixInfo{Issuer: <string>, UrlPrefix: <string>})>, map(<string>)<string>) -> <bool, string>
+//
+// Arguments:
+// * `image` - image to be verified
+// * `keyless` - list of issuers and subjects
+// * `annotations` - annotations that must have been provided by all signers when they signed the OCI artifact
 
 func OCI() cel.EnvOption {
 	return cel.Lib(ociLib{})
@@ -85,6 +99,8 @@ func (ociLib) CompileOptions() []cel.EnvOption {
 		cel.Container("oci"),
 
 		ext.NativeTypes(reflect.TypeOf(&oci.KeylessInfo{})),
+		ext.NativeTypes(reflect.TypeOf(&verifyV2.KeylessPrefixInfo{})),
+
 		cel.Function("kw.oci.getManifestDigest",
 			cel.Overload("kw_oci_get_manifest_digest",
 				[]*cel.Type{cel.StringType}, // receives <string>
@@ -127,6 +143,18 @@ func (ociLib) CompileOptions() []cel.EnvOption {
 				},
 				cel.DynType,
 				cel.FunctionBinding(verifyKeylessExactMatch),
+			),
+		),
+
+		cel.Function("kw.oci.verifyKeylessPrefixMatch",
+			cel.Overload("kw_oci_verify_keyless_prefix_match",
+				[]*cel.Type{
+					cel.StringType,
+					cel.ListType(cel.ObjectType("verify_v2.KeylessPrefixInfo")),
+					cel.MapType(cel.StringType, cel.StringType),
+				},
+				cel.DynType,
+				cel.FunctionBinding(verifyKeylessPrefixMatch),
 			),
 		),
 	}
@@ -256,6 +284,53 @@ func verifyKeylessExactMatch(args ...ref.Val) ref.Val { // nolint: dupl
 	}
 
 	response, err := verifyV2.VerifyKeylessExactMatch(&host, image, keylessList, annotationsMap.(map[string]string))
+	if err != nil {
+		return types.NewErr("cannot verify image: %s", err)
+	}
+
+	return types.NewDynamicMap(types.DefaultTypeAdapter, map[string]any{
+		"trusted": response.IsTrusted,
+		"digest":  response.Digest,
+	})
+}
+
+func verifyKeylessPrefixMatch(args ...ref.Val) ref.Val { //nolint: dupl
+	image, ok1 := args[0].Value().(string)
+	if !ok1 {
+		return types.MaybeNoSuchOverloadErr(args[0])
+	}
+
+	keylessPrefix, ok2 := args[1].(traits.Lister)
+	if !ok2 {
+		return types.MaybeNoSuchOverloadErr(args[1])
+	}
+	keylessPrefixLength, ok := keylessPrefix.Size().(types.Int)
+	if !ok {
+		return types.NewErr("cannot convert keyless prefix info length to int")
+	}
+	keylessPrefixList := make([]verifyV2.KeylessPrefixInfo, 0, keylessPrefixLength)
+	for i := types.Int(0); i < keylessPrefixLength; i++ {
+		elem, err := keylessPrefix.Get(i).ConvertToNative(reflect.TypeOf(verifyV2.KeylessPrefixInfo{}))
+		if err != nil {
+			return types.NewErr("cannot convert keyless prefix info: %s", err)
+		}
+		elemKeylessPrefixInfo, ok := elem.(verifyV2.KeylessPrefixInfo)
+		if !ok {
+			return types.NewErr("cannot convert keyless prefix info length to int")
+		}
+		keylessPrefixList = append(keylessPrefixList, elemKeylessPrefixInfo)
+	}
+
+	annotations, ok4 := args[2].(traits.Mapper)
+	if !ok4 {
+		return types.MaybeNoSuchOverloadErr(args[2])
+	}
+	annotationsMap, err := annotations.ConvertToNative(reflect.TypeOf(map[string]string{}))
+	if err != nil {
+		return types.MaybeNoSuchOverloadErr(args[2])
+	}
+
+	response, err := verifyV2.VerifyKeylessPrefixMatch(&host, image, keylessPrefixList, annotationsMap.(map[string]string))
 	if err != nil {
 		return types.NewErr("cannot verify image: %s", err)
 	}
