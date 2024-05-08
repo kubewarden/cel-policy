@@ -80,6 +80,25 @@ import (
 // * `image` - image to be verified
 // * `keyless` - list of issuers and subjects
 // * `annotations` - annotations that must have been provided by all signers when they signed the OCI artifact
+//
+// # OCI.VerifyCertificate
+//
+// Verify sigstore signatures of an image using a user provided certificate
+// Usage in CEL:
+//	OCI.VerifyCertificate(<string>, <string>, <list(<string>)>, <bool>, map(<string>)<string>) -> <bool, string>
+//
+// Arguments:
+// *  `image` - image to be verified
+// *  `certificate` - PEM encoded certificate used to verify the signature
+// *  `certificate_chain` - Optional. PEM encoded certificates used to verify
+//    `certificate`. When not specified, the certificate is assumed to be trusted
+// *  `require_rekor_bundle` - require the signature layer to have a Rekor bundle.
+//    Having a Rekor bundle allows further checks to be performed, like ensuring
+//    the signature has been produced during the validity time frame of the
+//    certificate. It is recommended to set this value to `true` to have a more
+//    secure verification process.
+// *  `annotations` - annotations that must have been provided by all signers when
+//    they signed the OCI artifact
 
 func OCI() cel.EnvOption {
 	return cel.Lib(ociLib{})
@@ -155,6 +174,20 @@ func (ociLib) CompileOptions() []cel.EnvOption {
 				},
 				cel.DynType,
 				cel.FunctionBinding(verifyKeylessPrefixMatch),
+			),
+		),
+
+		cel.Function("kw.oci.verifyCertificate",
+			cel.Overload("kw_oci_verify_certificate",
+				[]*cel.Type{
+					cel.StringType,
+					cel.StringType,
+					cel.ListType(cel.StringType),
+					cel.BoolType,
+					cel.MapType(cel.StringType, cel.StringType),
+				},
+				cel.DynType,
+				cel.FunctionBinding(verifyCertificate),
 			),
 		),
 	}
@@ -331,6 +364,65 @@ func verifyKeylessPrefixMatch(args ...ref.Val) ref.Val { //nolint: dupl
 	}
 
 	response, err := verifyV2.VerifyKeylessPrefixMatch(&host, image, keylessPrefixList, annotationsMap.(map[string]string))
+	if err != nil {
+		return types.NewErr("cannot verify image: %s", err)
+	}
+
+	return types.NewDynamicMap(types.DefaultTypeAdapter, map[string]any{
+		"trusted": response.IsTrusted,
+		"digest":  response.Digest,
+	})
+}
+
+func verifyCertificate(args ...ref.Val) ref.Val {
+	image, ok1 := args[0].Value().(string)
+	if !ok1 {
+		return types.MaybeNoSuchOverloadErr(args[0])
+	}
+
+	cert, ok2 := args[1].Value().(string)
+	if !ok2 {
+		return types.MaybeNoSuchOverloadErr(args[1])
+	}
+
+	certChain, ok3 := args[2].(traits.Lister)
+	if !ok3 {
+		return types.MaybeNoSuchOverloadErr(args[2])
+	}
+
+	requireRekorBundle, ok4 := args[3].Value().(bool)
+	if !ok4 {
+		return types.MaybeNoSuchOverloadErr(args[3])
+	}
+
+	annotations, ok4 := args[4].(traits.Mapper)
+	if !ok4 {
+		return types.MaybeNoSuchOverloadErr(args[4])
+	}
+	annotationsMap, err := annotations.ConvertToNative(reflect.TypeOf(map[string]string{}))
+	if err != nil {
+		return types.MaybeNoSuchOverloadErr(args[4])
+	}
+
+	// convert all certChain from list(string) to [][]rune
+	certChainLength, ok := certChain.Size().(types.Int)
+	if !ok {
+		return types.NewErr("cannot convert certChain length to int")
+	}
+	certChainRune := make([][]rune, 0, certChainLength)
+	for i := types.Int(0); i < certChainLength; i++ {
+		elem, err2 := certChain.Get(i).ConvertToNative(reflect.TypeOf(""))
+		if err2 != nil {
+			return types.NewErr("cannot convert certChain: %s", err)
+		}
+		elemString, ok := elem.(string)
+		if !ok {
+			return types.NewErr("cannot convert cert into string")
+		}
+		certChainRune = append(certChainRune, []rune(elemString))
+	}
+
+	response, err := verifyV2.VerifyCertificate(&host, image, []rune(cert), certChainRune, requireRekorBundle, annotationsMap.(map[string]string))
 	if err != nil {
 		return types.NewErr("cannot verify image: %s", err)
 	}
