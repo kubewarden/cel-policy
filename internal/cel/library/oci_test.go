@@ -292,6 +292,64 @@ func TestVerifyKeylessPrefixMatch(t *testing.T) {
 		})
 	}
 }
+
+func TestVerifyCertificate(t *testing.T) {
+	tests := []struct {
+		name           string
+		expression     string
+		expectedResult interface{}
+	}{
+		{
+			"kw.oci.verifyCertificate empty annotations",
+			"kw.oci.verifyCertificate('myimage:latest', 'my PEM cert', ['cert_chain1', 'cert_chain2'], false, {})",
+			map[string]interface{}{
+				"trusted": true,
+				"digest":  "myhash",
+			},
+		},
+		{
+			"kw.oci.verifyCertificate empty cert chain",
+			"kw.oci.verifyCertificate('myimage:latest', 'my PEM cert', [], false, {})",
+			map[string]interface{}{
+				"trusted": true,
+				"digest":  "myhash",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var err error
+
+			host.Client, err = capabilities.NewSuccessfulMockWapcClient(
+				map[string]interface{}{
+					"is_trusted": true,
+					"digest":     "myhash",
+				},
+			)
+			require.NoError(t, err)
+
+			env, err := cel.NewEnv(
+				OCI(),
+			)
+			require.NoError(t, err)
+
+			ast, issues := env.Compile(test.expression)
+			require.Empty(t, issues)
+
+			prog, err := env.Program(ast, cel.EvalOptions(cel.OptExhaustiveEval))
+			require.NoError(t, err)
+
+			val, _, err := prog.Eval(map[string]interface{}{})
+			require.NoError(t, err)
+
+			result, err := val.ConvertToNative(reflect.TypeOf(test.expectedResult))
+			require.NoError(t, err)
+
+			require.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
 func TestOCIHostFailure(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -321,6 +379,11 @@ func TestOCIHostFailure(t *testing.T) {
 		{
 			"kw.oci.verifyKeylessPrefixMatch host failure",
 			"kw.oci.verifyKeylessPrefixMatch('myimage:latest', [ verify_v2.KeylessPrefixInfo{ Issuer: 'https://github.com/login/oauth', UrlPrefix: 'https://github.com/kubewarden/app-example/.github/workflows/ci.yml@refs/tags/' } ], {})",
+			"cannot verify image: hostcallback error",
+		},
+		{
+			"kw.oci.verifyCertificate host failure",
+			"kw.oci.verifyCertificate('myimage:latest', 'my PEM cert', ['cert_chain1', 'cert_chain2'], false, {})",
 			"cannot verify image: hostcallback error",
 		},
 	}
