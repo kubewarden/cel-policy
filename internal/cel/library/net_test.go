@@ -47,7 +47,7 @@ func TestNet(t *testing.T) {
 			ast, issues := env.Compile(test.expression)
 			require.Empty(t, issues)
 
-			prog, err := env.Program(ast)
+			prog, err := env.Program(ast, cel.EvalOptions(cel.OptExhaustiveEval))
 			require.NoError(t, err)
 
 			val, _, err := prog.Eval(map[string]interface{}{})
@@ -85,7 +85,7 @@ func TestNetHostFailure(t *testing.T) {
 			ast, issues := env.Compile(test.expression)
 			require.Empty(t, issues)
 
-			prog, err := env.Program(ast)
+			prog, err := env.Program(ast, cel.EvalOptions(cel.OptExhaustiveEval))
 			require.NoError(t, err)
 
 			_, _, err = prog.Eval(map[string]interface{}{})
