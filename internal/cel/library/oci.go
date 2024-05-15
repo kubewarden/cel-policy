@@ -1,6 +1,7 @@
 package library
 
 import (
+	"encoding/json"
 	"reflect"
 
 	"github.com/google/cel-go/cel"
@@ -9,6 +10,7 @@ import (
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/cel-go/ext"
 	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci"
+	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/manifest"
 	manifestDigest "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/manifest_digest"
 	verifyV2 "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/verify_v2"
 )
@@ -29,6 +31,16 @@ import (
 // Example:
 //
 // kw.oci.getManifestDigest('myimage')
+//
+// # OCI.GetOCIManifest
+//
+// Returns the OCI manifest of an image.
+// Since the type of the manifest depends of the given image (it could be a OCI image manifest
+// or a OCI index image manifest), the function returns an OciImageManifestResponse{} object.
+// See the Go SDK for more information on OciImageManifestResponse{}.
+//
+// Usage in CEL:
+// kw.oci.GetOCIManifest(<string>) -> OciImageManifestResponse{} object
 //
 // # OCI.VerifyPubKeysImage
 //
@@ -128,6 +140,14 @@ func (ociLib) CompileOptions() []cel.EnvOption {
 			),
 		),
 
+		cel.Function("kw.oci.getManifest",
+			cel.Overload("kw_oci_get_manifest",
+				[]*cel.Type{cel.StringType},
+				cel.DynType,
+				cel.UnaryBinding(getManifest),
+			),
+		),
+
 		cel.Function("kw.oci.verifyPubKeysImage",
 			cel.Overload("kw_oci_verify_pub_keys_image",
 				[]*cel.Type{
@@ -211,6 +231,30 @@ func getManifestDigest(arg ref.Val) ref.Val {
 
 	return types.String(digest)
 }
+
+func getManifest(arg ref.Val) ref.Val {
+	image, ok := arg.Value().(string)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg)
+	}
+
+	ociImageManifestResponse, err := manifest.GetOCIManifest(&host, image)
+	if err != nil {
+		return types.NewErr("cannot get oci manifest: %s", err)
+	}
+
+	encodedResponse, err := json.Marshal(ociImageManifestResponse)
+	if err != nil {
+		return types.NewErr("cannot serialize ociImageManifestResponse to JSON: %w", err)
+	}
+	mapResponse := map[string]interface{}{}
+	err = json.Unmarshal(encodedResponse, &mapResponse)
+	if err != nil {
+		return types.NewErr("cannot deserialize encoded ociImageManifestResponse to map: %w", err)
+	}
+	return types.NewDynamicMap(types.DefaultTypeAdapter, mapResponse)
+}
+
 func verifyPubKeysImage(args ...ref.Val) ref.Val {
 	image, ok1 := args[0].Value().(string)
 	if !ok1 {

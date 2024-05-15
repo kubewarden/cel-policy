@@ -64,6 +64,7 @@ func NewCompiler() (*Compiler, error) {
 		library.Crypto(),
 		library.Kubernetes(),
 		library.Net(),
+		library.OCI(),
 	)
 	if err != nil {
 		return nil, err

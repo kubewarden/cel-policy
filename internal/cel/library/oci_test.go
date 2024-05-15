@@ -10,6 +10,8 @@ import (
 	"github.com/kubewarden/policy-sdk-go/pkg/capabilities"
 	manifestDigest "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/manifest_digest"
 
+	digest "github.com/opencontainers/go-digest"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,6 +35,60 @@ func TestOCIGetManifestDigest(t *testing.T) {
 			host.Client, err = capabilities.NewSuccessfulMockWapcClient(manifestDigest.OciManifestResponse{
 				Digest: test.response,
 			})
+			require.NoError(t, err)
+
+			env, err := cel.NewEnv(
+				OCI(),
+			)
+			require.NoError(t, err)
+
+			ast, issues := env.Compile(test.expression)
+			require.Empty(t, issues)
+
+			prog, err := env.Program(ast, cel.EvalOptions(cel.OptExhaustiveEval))
+			require.NoError(t, err)
+
+			val, _, err := prog.Eval(map[string]interface{}{})
+			require.NoError(t, err)
+
+			result, err := val.ConvertToNative(reflect.TypeOf(test.expectedResult))
+			require.NoError(t, err)
+
+			require.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
+func TestOCIGetManifest(t *testing.T) {
+	tests := []struct {
+		name           string
+		expression     string
+		expectedResult interface{}
+	}{
+		{
+			"kw.oci.getManifest",
+			"kw.oci.getManifest('myimage:latest')",
+			map[string]interface{}{
+				"image": map[string]interface{}{
+					"annotations": map[string]interface{}{"annotation": "value"},
+					"config": map[string]interface{}{
+						"annotations": map[string]interface{}{"annotation": "value"},
+						"digest":      "sha256:9e1df6670ac65cbe820f7dffc251cfb13c6fcfea9861c518953dc290f39e7b04",
+						"mediaType":   "application/vnd.oci.image.manifest.v1+json",
+						"platform": map[string]interface{}{
+							"architecture": "amd64",
+							"os":           "linux",
+						}, "size": float64(1024), "urls": []interface{}{"ghcr.io/kubewarden/policy-server:latest"},
+					}, "layers": []interface{}{}, "mediaType": "application/vnd.oci.image.manifest.v1+json", "schemaVersion": float64(0),
+				},
+				"index": nil,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var err error
+			host.Client, err = capabilities.NewSuccessfulMockWapcClient(buildMediaTypeManifest())
 			require.NoError(t, err)
 
 			env, err := cel.NewEnv(
@@ -362,6 +418,11 @@ func TestOCIHostFailure(t *testing.T) {
 			"cannot get oci manifest: hostcallback error",
 		},
 		{
+			"kw.oci.getManifest host failure",
+			"kw.oci.getManifest('myimage:latest')",
+			"cannot get oci manifest: hostcallback error",
+		},
+		{
 			"kw.oci.verifyPubKeysImage host failure",
 			"kw.oci.verifyPubKeysImage('myimage:latest', ['pubkey1', 'pubkey2'], {})",
 			"cannot verify image: hostcallback error",
@@ -407,5 +468,24 @@ func TestOCIHostFailure(t *testing.T) {
 			require.Error(t, err)
 			require.Equal(t, test.expected, err.Error())
 		})
+	}
+}
+
+func buildMediaTypeManifest() *specs.Manifest {
+	return &specs.Manifest{
+		MediaType: specs.MediaTypeImageManifest,
+		Config: specs.Descriptor{
+			MediaType:   specs.MediaTypeImageManifest,
+			Digest:      digest.FromString("mydummydigest"),
+			Size:        1024,
+			URLs:        []string{"ghcr.io/kubewarden/policy-server:latest"},
+			Annotations: map[string]string{"annotation": "value"},
+			Platform: &specs.Platform{
+				Architecture: "amd64",
+				OS:           "linux",
+			},
+		},
+		Layers:      []specs.Descriptor{},
+		Annotations: map[string]string{"annotation": "value"},
 	}
 }
