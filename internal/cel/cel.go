@@ -61,8 +61,10 @@ func NewCompiler() (*Compiler, error) {
 		cel.Variable("namespaceObject", cel.DynType),
 
 		// Kubewarden host capabilities libraries
+		library.Crypto(),
 		library.Kubernetes(),
 		library.Net(),
+		library.OCI(),
 	)
 	if err != nil {
 		return nil, err
