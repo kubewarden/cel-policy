@@ -1,0 +1,4 @@
+validations:
+  - expression: "kw.net.lookupHost('127.0.0.1')[0] == '127.0.0.1'"
+    messageExpression: "'Wanted 127.0.0.2, got ' + kw.net.lookupHost('127.0.0.1')[0]  + ' instead'"
+    reason: Unauthorized
