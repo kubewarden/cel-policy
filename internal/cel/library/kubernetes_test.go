@@ -22,7 +22,7 @@ func TestKubernetes(t *testing.T) {
 	}{
 		{
 			"kw.k8s.listResourcesByNamespace",
-			"kw.k8s.listResourcesByNamespace(ListResourcesByNamespaceRequest{Namespace: 'default'}).items[0].kind",
+			"kw.k8s.listResourcesByNamespace(kubernetes.ListResourcesByNamespaceRequest{Namespace: 'default'}).items[0].kind",
 			map[string]interface{}{
 				"items": []interface{}{
 					&corev1.Pod{
@@ -45,7 +45,7 @@ func TestKubernetes(t *testing.T) {
 		},
 		{
 			"kw.k8s.listAllResources",
-			"kw.k8s.listAllResources(ListAllResourcesRequest{Kind: 'Pod'}).items[0].metadata.name",
+			"kw.k8s.listAllResources(kubernetes.ListAllResourcesRequest{Kind: 'Pod'}).items[0].metadata.name",
 			&corev1.PodList{
 				Items: []*corev1.Pod{
 					{
@@ -64,7 +64,7 @@ func TestKubernetes(t *testing.T) {
 		},
 		{
 			"kw.k8s.getResource",
-			"kw.k8s.getResource(GetResourceRequest{Kind: 'Pod'}).metadata.name",
+			"kw.k8s.getResource(kubernetes.GetResourceRequest{Kind: 'Pod'}).metadata.name",
 			&corev1.Pod{
 				Metadata: &metav1.ObjectMeta{
 					Name: "nginx",
@@ -109,17 +109,17 @@ func TestKubernetesHostFailure(t *testing.T) {
 	}{
 		{
 			"kw.k8s.listAllResources host failure",
-			"kw.k8s.listAllResources(ListAllResourcesRequest{Kind: 'Pod'})",
+			"kw.k8s.listAllResources(kubernetes.ListAllResourcesRequest{Kind: 'Pod'})",
 			"cannot list all Kubernetes resources: hostcallback error",
 		},
 		{
 			"kw.k8s.listResourcesByNamespace host failure",
-			"kw.k8s.listResourcesByNamespace(ListResourcesByNamespaceRequest{Namespace: 'default'})",
+			"kw.k8s.listResourcesByNamespace(kubernetes.ListResourcesByNamespaceRequest{Namespace: 'default'})",
 			"cannot list Kubernetes resources by namespace: hostcallback error",
 		},
 		{
 			"kw.k8s.getResource host failure",
-			"kw.k8s.getResource(GetResourceRequest{Kind: 'Pod'}).metadata.name",
+			"kw.k8s.getResource(kubernetes.GetResourceRequest{Kind: 'Pod'}).metadata.name",
 			"cannot get Kubernetes resource: hostcallback error",
 		},
 	}

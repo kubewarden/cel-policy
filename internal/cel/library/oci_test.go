@@ -187,7 +187,7 @@ func TestVerifyKeylessExactMatch(t *testing.T) {
 	}{
 		{
 			"kw.oci.verifyKeylessExactMatch empty annotations",
-			"kw.oci.verifyKeylessExactMatch('myimage:latest', [KeylessInfo{Issuer: 'foo', Subject: 'bar' }], {})",
+			"kw.oci.verifyKeylessExactMatch('myimage:latest', [oci.KeylessInfo{Issuer: 'foo', Subject: 'bar' }], {})",
 			map[string]interface{}{
 				"trusted": true,
 				"digest":  "myhash",
@@ -373,7 +373,7 @@ func TestOCIHostFailure(t *testing.T) {
 		},
 		{
 			"kw.oci.verifyKeylessExactMatch host failure",
-			"kw.oci.verifyKeylessExactMatch('myimage:latest', [ KeylessInfo{ Issuer: 'https://github.com/login/oauth', Subject: 'mail@example.com' } ], {})",
+			"kw.oci.verifyKeylessExactMatch('myimage:latest', [ oci.KeylessInfo{ Issuer: 'https://github.com/login/oauth', Subject: 'mail@example.com' } ], {})",
 			"cannot verify image: hostcallback error",
 		},
 		{
