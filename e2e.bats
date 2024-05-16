@@ -132,3 +132,33 @@
   [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
   [ $(expr "$output" : '.*"message":.*no signatures found for image.*') -ne 0 ]
 }
+
+@test "kw.oci.verifyCertificate: Certificate verification with Rekor enabled" {
+  # Need to run the command inside of `bash -c` because of a bats
+  # limitation: https://bats-core.readthedocs.io/en/stable/gotchas.html?highlight=pipe#my-piped-command-does-not-work-under-run
+
+  run bash -c 'kwctl run \
+    --request-path test_data/oci/pod_creation_signed_with_certificate.json \
+    --settings-path test_data/oci/settings-pod_signed_with_cert_and_rekor.yaml \
+    annotated-policy.wasm | jq -r ".patch | @base64d"'
+
+  # this prints the output when one the checks below fails
+  echo "output = ${output}"
+
+  [ "$status" -eq 0 ]
+  [ $(expr "$output" : '.*ghcr.io/kubewarden/tests/pod-privileged:v0.2.1@sha256:db48aecd83c2826eba154a84c4fbabe0977f96b3360b4c6098578eae5c2d2882.*') -ne 0 ]
+}
+
+@test "kw.oci.verifyCertificate: Certificate verification with a wrong certificate chain" {
+  run kwctl run \
+    --request-path test_data/oci/pod_creation_signed_with_certificate.json \
+    --settings-path test_data/oci/settings-cert-verification-wrong-cert-chain.yaml \
+    annotated-policy.wasm
+
+  # this prints the output when one the checks below fails
+  echo "output = ${output}"
+
+  [ "$status" -eq 1 ]
+  [ $(expr "$output" : '.*Provided settings are not valid.*') -ne 0 ]
+  [ $(expr "$output" : '.*Certificate not trusted: Certificate is not trusted by the provided cert chain.*') -ne 0 ]
+}
