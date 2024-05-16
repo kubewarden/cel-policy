@@ -1,0 +1,13 @@
+variables:
+  - name: image
+    expression: "'ghcr.io/kubewarden/test-verify-image-signatures:unsigned'"
+  - name: pubkey
+    expression: |
+      '-----BEGIN PUBLIC KEY-----' +
+      'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEALYYVLuPXXcKajo5meRcU+c6/iZe' +
+      'Dh+o3ZZs1puVW5FyS1cOusnLn209R0IOFL479vm1iFn+auB41JJZUxfc8g==' +
+      '-----END PUBLIC KEY-----'
+validations:
+  - expression: "kw.oci.verifyPubKeysImage(variables.image, [variables.pubkey], {} ).trusted == true"
+    messageExpression: "'Object ' + object.metadata.name + ' is not accepted, verification of image ' + variables.image + ' failed'"
+    reason: Unauthorized
