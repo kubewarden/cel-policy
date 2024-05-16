@@ -1,17 +1,18 @@
 ## CEL Policy
 
-This policy is a meta-policy that allows to run [CEL](https://github.com/google/cel-go) expressions
+This is a meta-policy that allows to run [CEL](https://github.com/google/cel-go) expressions
 against Kubernetes resources.
 A meta-policy is a policy that can be configured via settings, and does not require to be recompiled to change its behavior, acting as a DSL.
 
 The settings of the policy are compliant with the [ValidatingAdmissionPolicy Kubernetes resource](https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/),
 please refer to [writing a policy](#writing-a-policy) for more information on what fields are supported.
-Under the hood, the policy uses [CEL](https://github.com/google/cel-go) and [Kubernetes CEL libraries](https://pkg.go.dev/k8s.io/apiserver/pkg/cel/library),
-this allows to use the same CEL syntax and functions that are available in Kubernetes.
+
+The policy is implemented using [CEL](https://github.com/google/cel-go) and [Kubernetes CEL libraries](https://pkg.go.dev/k8s.io/apiserver/pkg/cel/library), together with our own Kubewarden CEL library extensions for context-aware calls.
+This allows to reuse the same CEL syntax and functions that are available in Kubernetes.
 
 ### Writing a policy
 
-Both `validations` and `variables` fields are supported.
+Both `validations` and `variables` fields from Kubernetes' ValidatingAdmissionPolicies are supported.
 The policy provides the following variables:
 
 - `request`: the admission request
@@ -28,7 +29,7 @@ It is required that the message expression is a string, otherwise the policy wil
 
 For more information about variables and validation expressions, please refer to the [ValidatingAdmissionPolicy Kubernetes resource](https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/).
 
-### Example
+#### Example
 
 Given the following `ValidatingAdmissionPolicy`:
 
@@ -80,6 +81,35 @@ spec:
   mutating: false
   backgroundAudit: false
 ```
+
+### Kubewarden CEL library extensions
+
+#### `kw.net.lookupHost`
+
+This CEL function looks up the addresses for a given hostname via DNS. It
+returns the addresses as a list of strings.
+
+    net.lookupHost(<string>) -> <list<string>>
+
+Example:
+
+    kw.net.lookupHost('google.com') // returns '142.250.185.238'
+
+#### `kw.oci.verifyPubKeysImage`
+
+This CEL function verifies Sigstore signatures of an image using public keys.
+
+    OCI.verifyPubKeysImage(<string>, <list<string>>, map(<string>)<string>) -> <bool, string>
+
+Returns a `map(<string>)` with 2 fields:
+
+- `"trusted": <bool>` informs if the image passed verification or not
+- `"digest": <string>` digest of the verified image
+
+Example:
+
+    kw.oci.verifyPubKeysImage('ghcr.io/example/image', [variables.pubkey], {} ).trusted == true
+    where variables.pubkey is defined as '-----BEGIN PUBLIC KEY----- <key contents> ==-----END PUBLIC KEY-----'
 
 ## Known limitations
 
