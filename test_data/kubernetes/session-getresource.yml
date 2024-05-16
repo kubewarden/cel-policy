@@ -1,0 +1,10 @@
+- type: Exchange
+  request: |
+    !KubernetesGetResource
+    api_version: v1
+    kind: Namespace
+    name: default
+    disable_cache: false
+  response:
+    type: Success
+    payload: '{"apiVersion":"v1","kind":"Namespace","metadata":{"creationTimestamp":"2023-05-19T17:45:25Z","labels":{"cccenter":"zpto", "other": "bla"},"managedFields":[{"apiVersion":"v1","fieldsType":"FieldsV1","fieldsV1":{"f:metadata":{"f:labels":{".":{},"f:kubernetes.io/metadata.name":{}}}},"manager":"k3s","operation":"Update","time":"2023-05-19T17:45:25Z"}],"name":"default","resourceVersion":"4","uid":"3db78359-d506-4ab4-918b-69830aefdab4"},"spec":{"finalizers":["kubernetes"]},"status":{"phase":"Active"}}'

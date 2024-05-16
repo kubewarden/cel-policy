@@ -1,0 +1,4 @@
+validations:
+  - expression: "kw.k8s.listAllResources(kubernetes.ListAllResourcesRequest{APIVersion: 'v1', Kind: 'Namespace'})[0].metadata.name == 'customer-1'"
+    # "kw.k8s.getResource(GetResourceRequest{Kind: 'Pod'}).metadata.name == 'foo'"
+    reason: Unauthorized

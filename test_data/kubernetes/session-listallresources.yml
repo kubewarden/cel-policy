@@ -1,0 +1,8 @@
+- type: Exchange
+  request: |
+    !KubernetesListResourceAll
+    api_version: v1
+    kind: Namespace
+  response:
+    type: Success
+    payload: '{"metadata":{"resourceVersion":"1246066"},"items":[{"metadata":{"annotations":{"kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"v1\",\"kind\":\"Namespace\",\"metadata\":{\"annotations\":{},\"labels\":{\"customer-id\":\"1\",\"name\":\"customer-1\"},\"name\":\"customer-1\"}}\n"},"creationTimestamp":"2023-12-17T08:44:19Z","labels":{"customer-id":"1","kubernetes.io/metadata.name":"customer-1","name":"customer-1"},"managedFields":[{"apiVersion":"v1","fieldsType":"FieldsV1","fieldsV1":{"f:metadata":{"f:annotations":{".":{},"f:kubectl.kubernetes.io/last-applied-configuration":{}},"f:labels":{".":{},"f:customer-id":{},"f:kubernetes.io/metadata.name":{},"f:name":{}}}},"manager":"kubectl-client-side-apply","operation":"Update","time":"2023-12-17T08:44:19Z"}],"name":"customer-1","resourceVersion":"1166770","uid":"73ff934f-3d4d-4964-b243-b64ffb3e31aa"},"spec":{"finalizers":["kubernetes"]},"status":{"phase":"Active"}}]}'

@@ -1,0 +1,3 @@
+validations:
+  - expression: "kw.k8s.listResourcesByNamespace(kubernetes.ListResourcesByNamespaceRequest{APIVersion: 'apps/v1', Kind: 'Deployment', Namespace: 'customer-1'})[0].metadata.name == 'customer-1'"
+    reason: Unauthorized

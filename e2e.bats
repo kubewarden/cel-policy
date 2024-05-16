@@ -52,6 +52,53 @@
   [ $(expr "$output" : '.*"allowed":false,"status":{"message":"Wanted 127.0.0.2, got 127.0.0.1 instead","code":401}.*') -ne 0 ]
 }
 
+# Kubernetes tests
+  
+@test "kw.k8s.getResource: Accept" {
+  run kwctl run \
+    --request-path test_data/kubernetes/pod.json \
+    --replay-host-capabilities-interactions test_data/kubernetes/session.yml \
+    --settings-path test_data/kubernetes/settings-getresource.yaml \
+    --allow-context-aware \
+    annotated-policy.wasm
+
+  # this prints the output when one the checks below fails
+  echo "output = ${output}"
+
+  [ "$status" -eq 0 ]
+  [ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
+}
+
+@test "kw.k8s.listAllResources: Accept" {
+  run kwctl run \
+    --request-path test_data/kubernetes/pod.json \
+    --replay-host-capabilities-interactions test_data/kubernetes/session-listallresources.yml \
+    --settings-path test_data/kubernetes/settings-listallresources.yaml \
+    --allow-context-aware \
+    annotated-policy.wasm
+
+  # this prints the output when one the checks below fails
+  echo "output = ${output}"
+
+  [ "$status" -eq 0 ]
+  [ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
+}
+
+@test "kw.k8s.listResourcesByNamespace: Accept" {
+  run kwctl run \
+    --request-path test_data/kubernetes/pod.json \
+    --replay-host-capabilities-interactions test_data/kubernetes/session-listresources.yaml \
+    --settings-path test_data/kubernetes/settings-listresources.yaml \
+    --allow-context-aware \
+    annotated-policy.wasm
+
+  # this prints the output when one the checks below fails
+  echo "output = ${output}"
+
+  [ "$status" -eq 0 ]
+  [ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
+}
+
 # OCI tests
  
 @test "kw.oci.verifyPubKeysImage: accept a valid signature" {
