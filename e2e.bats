@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-@test "accept" {
+@test "vanilla cel test: accept" {
   run kwctl run annotated-policy.wasm \
     --allow-context-aware \
     --replay-host-capabilities-interactions test_data/session.yaml \
@@ -14,7 +14,7 @@
   [ $(expr "$output" : '.*allowed.*true') -ne 0 ]
 }
 
-@test "reject" {
+@test "vanilla cel test: reject" {
   run kwctl run annotated-policy.wasm \
     --allow-context-aware \
     --replay-host-capabilities-interactions test_data/session.yaml \
