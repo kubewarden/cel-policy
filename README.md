@@ -1,14 +1,14 @@
 ## CEL Policy
 
-This is a meta-policy that allows to run [CEL](https://github.com/google/cel-go) expressions
+This is a meta-policy that allows running [CEL](https://github.com/google/cel-go) expressions
 against Kubernetes resources.
-A meta-policy is a policy that can be configured via settings, and does not require to be recompiled to change its behavior, acting as a DSL.
+A meta-policy is a policy that can be configured via settings, and does not require recompilation to change its behavior, acting as a DSL.
 
 The settings of the policy are compliant with the [ValidatingAdmissionPolicy Kubernetes resource](https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/),
 please refer to [writing a policy](#writing-a-policy) for more information on what fields are supported.
 
 The policy is implemented using [CEL](https://github.com/google/cel-go) and [Kubernetes CEL libraries](https://pkg.go.dev/k8s.io/apiserver/pkg/cel/library), together with our own Kubewarden CEL library extensions for context-aware calls.
-This allows to reuse the same CEL syntax and functions that are available in Kubernetes.
+This allows reusing the same CEL syntax and functions that are available in Kubernetes.
 
 ### Writing a policy
 
