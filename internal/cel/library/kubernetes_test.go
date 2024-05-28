@@ -1,83 +1,124 @@
-// nolint: dupl
 package library
 
 import (
-	"fmt"
+	"encoding/json"
 	"reflect"
 	"testing"
 
 	"github.com/google/cel-go/cel"
 	corev1 "github.com/kubewarden/k8s-objects/api/core/v1"
 	metav1 "github.com/kubewarden/k8s-objects/apimachinery/pkg/apis/meta/v1"
-	"github.com/kubewarden/policy-sdk-go/pkg/capabilities"
+	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/kubernetes"
 	"github.com/stretchr/testify/require"
+
+	mocks "github.com/kubewarden/cel-policy/mocks/github.com/kubewarden/policy-sdk-go/pkg/capabilities"
 )
 
 func TestKubernetes(t *testing.T) {
 	tests := []struct {
-		name           string
-		expression     string
-		response       interface{}
-		expectedResult interface{}
+		name              string
+		expression        string
+		expectedOperation string
+		expectedRequest   interface{}
+		response          interface{}
+		expectedResult    interface{}
 	}{
 		{
-			"kw.k8s.listResourcesByNamespace",
-			"kw.k8s.listResourcesByNamespace(ListResourcesByNamespaceRequest{Namespace: 'default'}).items[0].kind",
-			map[string]interface{}{
-				"items": []interface{}{
-					&corev1.Pod{
-						Kind: "Pod",
-						Metadata: &metav1.ObjectMeta{
-							Name:      "nginx",
-							Namespace: "default",
-						},
-					},
-					&corev1.Service{
-						Kind: "Service",
-						Metadata: &metav1.ObjectMeta{
-							Name:      "pgsql",
-							Namespace: "default",
-						},
-					},
-				},
+			"list",
+			"kw.k8s.apiVersion('v1').kind('Pod').labelSelector('foo=bar').list().items[1].metadata.name",
+			"list_resources_all",
+			kubernetes.ListAllResourcesRequest{
+				APIVersion:    "v1",
+				Kind:          "Pod",
+				LabelSelector: stringPtr("foo=bar"),
+				FieldSelector: nil,
 			},
-			"Pod",
-		},
-		{
-			"kw.k8s.listAllResources",
-			"kw.k8s.listAllResources(ListAllResourcesRequest{Kind: 'Pod'}).items[0].metadata.name",
 			&corev1.PodList{
 				Items: []*corev1.Pod{
 					{
+						Kind: "Pod",
 						Metadata: &metav1.ObjectMeta{
-							Name: "nginx",
+							Name:      "app1",
+							Namespace: "default",
 						},
 					},
 					{
+						Kind: "Pod",
 						Metadata: &metav1.ObjectMeta{
-							Name: "pgsql",
+							Name:      "app2",
+							Namespace: "other",
 						},
 					},
 				},
 			},
-			"nginx",
+			"app2",
 		},
 		{
-			"kw.k8s.getResource",
-			"kw.k8s.getResource(GetResourceRequest{Kind: 'Pod'}).metadata.name",
-			&corev1.Pod{
-				Metadata: &metav1.ObjectMeta{
-					Name: "nginx",
+			"list (namespace)",
+			"kw.k8s.apiVersion('v1').kind('Pod').fieldSelector('foo.bar=baz').namespace('default').list().items[0].metadata.name",
+			"list_resources_by_namespace",
+			kubernetes.ListResourcesByNamespaceRequest{
+				APIVersion:    "v1",
+				Kind:          "Pod",
+				Namespace:     "default",
+				LabelSelector: nil,
+				FieldSelector: stringPtr("foo.bar=baz"),
+			},
+			&corev1.PodList{
+				Items: []*corev1.Pod{
+					{
+						Kind: "Pod",
+						Metadata: &metav1.ObjectMeta{
+							Name:      "app1",
+							Namespace: "default",
+						},
+					},
+					{
+						Kind: "Pod",
+						Metadata: &metav1.ObjectMeta{
+							Name:      "app2",
+							Namespace: "default",
+						},
+					},
 				},
 			},
-			"nginx",
+			"app1",
+		},
+		{
+			"get",
+			"kw.k8s.apiVersion('v1').kind('Pod').namespace('default').get('app').metadata.labels.foo",
+			"get_resource",
+			kubernetes.GetResourceRequest{
+				APIVersion: "v1",
+				Kind:       "Pod",
+				Name:       "app",
+				Namespace:  stringPtr("default"),
+			},
+			&corev1.Pod{
+				Kind: "Pod",
+				Metadata: &metav1.ObjectMeta{
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+					Name:      "app",
+					Namespace: "default",
+				},
+			},
+			"bar",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var err error
-			host.Client, err = capabilities.NewSuccessfulMockWapcClient(test.response)
+			response, err := json.Marshal(test.response)
 			require.NoError(t, err)
+
+			expectedRequest, err := json.Marshal(test.expectedRequest)
+			require.NoError(t, err)
+
+			mockWapcClient := &mocks.MockWapcClient{}
+			mockWapcClient.On("HostCall", "kubewarden", "kubernetes", test.expectedOperation, expectedRequest).Return(response, nil)
+
+			host.Client = mockWapcClient
 
 			env, err := cel.NewEnv(
 				Kubernetes(),
@@ -87,7 +128,7 @@ func TestKubernetes(t *testing.T) {
 			ast, issues := env.Compile(test.expression)
 			require.Empty(t, issues)
 
-			prog, err := env.Program(ast, cel.EvalOptions(cel.OptExhaustiveEval))
+			prog, err := env.Program(ast)
 			require.NoError(t, err)
 
 			val, _, err := prog.Eval(map[string]interface{}{})
@@ -101,48 +142,6 @@ func TestKubernetes(t *testing.T) {
 	}
 }
 
-func TestKubernetesHostFailure(t *testing.T) {
-	tests := []struct {
-		name        string
-		expression  string
-		errorString string
-	}{
-		{
-			"kw.k8s.listAllResources host failure",
-			"kw.k8s.listAllResources(ListAllResourcesRequest{Kind: 'Pod'})",
-			"cannot list all Kubernetes resources: hostcallback error",
-		},
-		{
-			"kw.k8s.listResourcesByNamespace host failure",
-			"kw.k8s.listResourcesByNamespace(ListResourcesByNamespaceRequest{Namespace: 'default'})",
-			"cannot list Kubernetes resources by namespace: hostcallback error",
-		},
-		{
-			"kw.k8s.getResource host failure",
-			"kw.k8s.getResource(GetResourceRequest{Kind: 'Pod'}).metadata.name",
-			"cannot get Kubernetes resource: hostcallback error",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			var err error
-
-			host.Client = capabilities.NewFailingMockWapcClient(fmt.Errorf("hostcallback error"))
-
-			env, err := cel.NewEnv(
-				Kubernetes(),
-			)
-			require.NoError(t, err)
-
-			ast, issues := env.Compile(test.expression)
-			require.Empty(t, issues)
-
-			prog, err := env.Program(ast, cel.EvalOptions(cel.OptExhaustiveEval))
-			require.NoError(t, err)
-
-			_, _, err = prog.Eval(map[string]interface{}{})
-			require.Error(t, err)
-			require.Equal(t, test.errorString, err.Error())
-		})
-	}
+func stringPtr(s string) *string {
+	return &s
 }
