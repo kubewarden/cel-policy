@@ -9,9 +9,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kubewarden/k8s-objects v1.29.0-kw1
 	github.com/kubewarden/policy-sdk-go v0.8.0
-	github.com/stretchr/testify v1.8.4
-	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/stretchr/testify v1.9.0
 	k8s.io/apiserver v0.29.1
 )
 
