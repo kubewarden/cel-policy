@@ -26,6 +26,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/wapc/wapc-guest-tinygo v0.3.3 // indirect
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
 	golang.org/x/text v0.14.0 // indirect
