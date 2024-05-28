@@ -1,0 +1,5 @@
+mock-build-tags: "!wasi && !wasip1"
+packages:
+  github.com/kubewarden/policy-sdk-go/pkg/capabilities:
+    interfaces:
+      WapcClient:
