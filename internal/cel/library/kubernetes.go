@@ -1,190 +1,336 @@
+//nolint:varnamelen
 package library
 
 import (
 	"encoding/json"
-	"reflect"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
-	"github.com/google/cel-go/ext"
 	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/kubernetes"
 )
 
-// Kubernetes returns a cel.EnvOption to configure CEL-namespaced Kubernetes
-// host-callback Kubewarden functions.
+// Kubernetes provides a CEL function library extension for performing context-aware calls.
 //
-// # Kubernetes.ListResourcesByNamespace
+// apiVersion
 //
-// This CEL function returns all the Kubernetes resources in a specific Kubernetes namespace,
-// filtered via the options in ListResourcesByNamespaceRequest{}. See the Go
-// SDK for more information on ListResourcesByNamespaceRequest{}.
-// Usage in CEL:
+// Returns a scoped client builder that can be used to build a client object for a specific API version.
+// (v1 for core group, groupName/groupVersions for other).
 //
-// k8s.listResourcesByNamespace(ListResourcesByNamespaceRequest{Namespace: <string>}) ->
+//	kw.k8s.apiVersion(<string>) <APIVersionClient>
 //
-//	map(key, value) where:
-//	  key is a <string> "items"
-//	  value is a <list<object>> matching GroupVersionKind from "github.com/kubewarden/k8s-objects"
+// Examples:
 //
-// Example:
+//	kw.k8s.apiversion('v1') // returns an APIVersionClient for the core group
+//	kw.k8s.path('apps/v1') /// returns an APIVersionClient for the 'apps' group
 //
-//	 kw.k8s.listResourcesByNamespace(ListResourcesByNamespaceRequest{Namespace: 'default'}).items[0]
-//	 returns:
-//	{
-//	  Kind: "Pod",
-//	  Metadata: {
-//	    Name:      "nginx",
-//	    Namespace: "default",
-//	  },
-//	}
+// kind
 //
-// # Kubernetes.ListAllResources
+// Returns a Client object configured to list or get resources of the provided kind.
 //
-// This CEL function returns all the Kubernetes resources,
-// filtered via the options in ListAllResourcesRequest{}. See the Go
-// SDK for more information on ListAllResourcesRequest{}.
-// Usage in CEL:
+//	<APIVersionClient>.kind(<string>) <Client>
 //
-//	k8s.listAllResources(ListAllResourcesRequest{Kind: <string>}) ->
-//	  map(key, value) where:
-//	  key is a <string> "items"
-//	  value is a <list<object>> matching GroupVersionKind from "github.com/kubewarden/k8s-objects"
+// Examples:
 //
-// Example:
+//	kw.k8s.apiVersion('v1').kind('Pod') // returns a Client for the 'Pod' resources in the core group
+//	kw.k8s.apiVersion('apps/v1').kind('Deployment') // returns a Client for the 'Deployment' resources in the 'apps' group
 //
-//	kw.k8s.listAllResources(listAllResourcesRequest{Kind: 'Pod'}).items[0]
-//	 returns:
-//	{
-//	  Kind: "Pod",
-//	  Metadata: {
-//	    Name:      "nginx",
-//	    Namespace: "default",
-//	  },
-//	}
+// namespace
 //
-// # Kubernetes.getResource
+// Returns a Client object configured to list or get resources in the provided namespace.
 //
-// This CEL function returns a specific Kubernetes resources,
-// selected via the options in getResourceRequest{}. See the Go
-// SDK for more information on getResourceRequest{}.
-// Usage in CEL:
+//	<Client>.namespace(<string>) <Client>
 //
-//	k8s.getResource(getResourceRequest{Kind: <string>}) ->
-//	  <object> matching GroupVersionKind from "github.com/kubewarden/k8s-objects"
+// Examples:
 //
-// Example:
+//	kw.k8s.apiVersion('v1').kind('Pod').namespace('default') // returns a Client for the 'Pod' resources in the core group in the 'default' namespace
 //
-// kw.k8s.getResource(getResourceRequest{Kind: 'Pod'})
-// returns:
+// labelSelector
 //
-//	{
-//	  Kind: "Pod",
-//	  Metadata: {
-//	    Name:      "nginx",
-//	    Namespace: "default",
-//	  },
-//	}
+// Returns a Client object configured to list resources with the provided label selector.
+// NOTE: this is ignored for get operations. The label selector should be a valid Kubernetes label selector.
+//
+//	<Client>.labelSelector(<string>) <Client>
+//
+// Examples:
+//
+//	kw.k8s.apiVersion('v1').kind('Pod').labelSelector('app=nginx') // returns a Client for the 'Pod' resources in the core group with the label selector 'app=nginx'
+//
+// fieldSelector
+//
+// Returns a Client object configured to list resources with the provided field selector.
+// NOTE: this is ignored for get operations. The field selector should be a valid Kubernetes field selector.
+//
+//	<Client>.fieldSelector(<string>) <Client>
+//
+// Examples:
+//
+//	kw.k8s.apiVersion('v1').kind('Pod').fieldSelector('status.phase=Running') // returns a Client for the 'Pod' resources in the core group with the field selector 'status.phase=Running'
+//
+// list
+//
+// Returns a list of Kubernetes resources matching the client configuration.
+//
+//	<Client>.list() <objectList>
+//
+// Examples:
+//
+//	kw.k8s.apiVersion('v1').kind('Pod').namespace('default').list() // returns a list of 'Pod' resources in the 'default' namespace
+//	kw.k8s.apiVersion('v1').kind('Pod').list() // returns a list of 'Pod' resources in all namespaces
+//	kw.k8s.apiVersion('v1').kind('Pod').labelSelector('app=nginx').list() // returns a list of 'Pod' resources in all namespaces with the label selector 'app=nginx'
+//	kw.k8s.apiVersion('v1').kind('Pod').fieldSelector('status.phase=Running').namespace('default').list() // returns a list of running 'Pod' resources in the default namespace with the field selector 'status.phase=Running'
+//
+// get
+//
+// Returns a Kubernetes resource matching the provided name.
+// If a resource is namespaced, the namespace should be set using the namespace method.
+//
+//	<Client>.get(<string>) <object>
+//
+// Examples:
+//
+//	kw.k8s.apiVersion('v1').kind('Pod').namespace('default').get('nginx') // returns the 'Pod' resource with the name 'nginx' in the 'default' namespace
+//	kw.k8s.apiVersion('v1').kind('Pod').get('nginx') // error, 'Pod' resources are namespaced and the namespace must be set
+//	kw.k8s.apiVersion('v1').kind('Namespace').get('default') // returns the 'Namespace' resource with the name 'default'
+
 func Kubernetes() cel.EnvOption {
-	return cel.Lib(kubernetesLib{})
+	return cel.Lib(&kubernetesLib{})
 }
 
 type kubernetesLib struct{}
 
-// LibraryName implements the SingletonLibrary interface method.
-func (kubernetesLib) LibraryName() string {
+func (*kubernetesLib) LibraryName() string {
 	return "kw.k8s"
 }
 
-// CompileOptions implements the Library interface method.
-func (kubernetesLib) CompileOptions() []cel.EnvOption {
+func (*kubernetesLib) CompileOptions() []cel.EnvOption {
 	return []cel.EnvOption{
-		cel.Container("kubernetes"),
-
-		ext.NativeTypes(reflect.TypeOf(&kubernetes.ListResourcesByNamespaceRequest{})),
-		ext.NativeTypes(reflect.TypeOf(&kubernetes.ListAllResourcesRequest{})),
-		ext.NativeTypes(reflect.TypeOf(&kubernetes.GetResourceRequest{})),
-
-		cel.Function("kw.k8s.listResourcesByNamespace",
-			cel.Overload("kw_k8s_list_resources_by_namespace_request",
-				[]*cel.Type{cel.ObjectType("kubernetes.ListResourcesByNamespaceRequest")},
-				cel.DynType,
-				cel.UnaryBinding(listResourcesByNamespace),
+		cel.Function("kw.k8s.apiVersion",
+			cel.Overload("kw_k8s_api_version",
+				[]*cel.Type{cel.StringType},
+				apiVersionClientType,
+				cel.UnaryBinding(apiVersion),
 			),
 		),
-		cel.Function("kw.k8s.listAllResources",
-			cel.Overload("kw_k8s_list_all_resources_request",
-				[]*cel.Type{cel.ObjectType("kubernetes.ListAllResourcesRequest")},
-				cel.DynType,
-				cel.UnaryBinding(listAllResources),
+		cel.Function("kind",
+			cel.MemberOverload("kw_k8s_kind",
+				[]*cel.Type{apiVersionClientType, cel.StringType},
+				clientType,
+				cel.BinaryBinding(kind),
 			),
 		),
-		cel.Function("kw.k8s.getResource",
-			cel.Overload("kw_k8s_get_resource_request",
-				[]*cel.Type{cel.ObjectType("kubernetes.GetResourceRequest")},
+		cel.Function("namespace",
+			cel.MemberOverload("kw_k8s_namespace",
+				[]*cel.Type{clientType, cel.StringType},
+				clientType,
+				cel.BinaryBinding(namespace),
+			),
+		),
+		cel.Function("labelSelector",
+			cel.MemberOverload("kw_k8s_label_selector",
+				[]*cel.Type{clientType, cel.StringType},
+				clientType,
+				cel.BinaryBinding(labelSelector),
+			),
+		),
+		cel.Function("fieldSelector",
+			cel.MemberOverload("kw_k8s_field_selector",
+				[]*cel.Type{clientType, cel.StringType},
+				clientType,
+				cel.BinaryBinding(fieldSelector),
+			),
+		),
+		cel.Function("list",
+			cel.MemberOverload("kw_k8s_list",
+				[]*cel.Type{clientType},
 				cel.DynType,
-				cel.UnaryBinding(getResource),
+				cel.UnaryBinding(list),
+			),
+		),
+		cel.Function("get",
+			cel.MemberOverload("kw_k8s_get",
+				[]*cel.Type{clientType, cel.StringType},
+				cel.DynType,
+				cel.BinaryBinding(get),
 			),
 		),
 	}
 }
 
-// ProgramOptions implements the Library interface method.
-func (kubernetesLib) ProgramOptions() []cel.ProgramOption {
+func (*kubernetesLib) ProgramOptions() []cel.ProgramOption {
 	return []cel.ProgramOption{}
 }
 
-func listAllResources(arg ref.Val) ref.Val {
-	listAllResourcesRequest, ok := arg.Value().(*kubernetes.ListAllResourcesRequest)
+func apiVersion(arg ref.Val) ref.Val {
+	apiVersion, ok := arg.Value().(string)
 	if !ok {
 		return types.MaybeNoSuchOverloadErr(arg)
 	}
 
-	responseBytes, err := kubernetes.ListResources(&host, *listAllResourcesRequest)
+	return apiVersionClient{receiverOnlyObjectVal: receiverOnlyVal(apiVersionClientType), apiVersion: apiVersion}
+}
+
+func kind(arg1, arg2 ref.Val) ref.Val {
+	apiVersionClient, ok := arg1.(apiVersionClient)
+	if !ok {
+		panic(apiVersionClient)
+	}
+
+	kind, ok := arg2.Value().(string)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg2)
+	}
+
+	return client{receiverOnlyObjectVal: receiverOnlyVal(clientType), apiVersion: apiVersionClient.apiVersion, kind: kind}
+}
+
+func namespace(arg1, arg2 ref.Val) ref.Val {
+	client, ok := arg1.(client)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg1)
+	}
+
+	namespace, ok := arg2.Value().(string)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg2)
+	}
+
+	client.namespace = &namespace
+
+	return client
+}
+
+func labelSelector(arg1, arg2 ref.Val) ref.Val {
+	client, ok := arg1.(client)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg1)
+	}
+
+	labelSelector, ok := arg2.Value().(string)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg2)
+	}
+
+	client.labelSelector = &labelSelector
+
+	return client
+}
+
+func fieldSelector(arg1, arg2 ref.Val) ref.Val {
+	client, ok := arg1.(client)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg1)
+	}
+
+	fieldSelector, ok := arg2.Value().(string)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg2)
+	}
+
+	client.fieldSelector = &fieldSelector
+
+	return client
+}
+
+func list(arg ref.Val) ref.Val {
+	client, ok := arg.(client)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg)
+	}
+
+	return client.list()
+}
+
+func get(arg1 ref.Val, arg2 ref.Val) ref.Val {
+	client, ok := arg1.(client)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg1)
+	}
+
+	name, ok := arg2.Value().(string)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg2)
+	}
+
+	return client.get(name)
+}
+
+var apiVersionClientType = cel.ObjectType("kw.k8s.APIVersionClient")
+
+// apiVersionClient is an intermediate object that holds the API version.
+// It is used to build the client object.
+type apiVersionClient struct {
+	receiverOnlyObjectVal
+	apiVersion string
+}
+
+var clientType = cel.ObjectType("kw.k8s.Client")
+
+// client is the object that holds the Kubernetes client configuration
+// and exposes the list and get functions.
+type client struct {
+	receiverOnlyObjectVal
+	apiVersion    string
+	kind          string
+	namespace     *string
+	labelSelector *string
+	fieldSelector *string
+}
+
+// list returns a list of Kubernetes resources.
+func (c *client) list() ref.Val {
+	var responseBytes []byte
+	var err error
+	if c.namespace != nil {
+		request := kubernetes.ListResourcesByNamespaceRequest{
+			APIVersion:    c.apiVersion,
+			Kind:          c.kind,
+			Namespace:     *c.namespace,
+			LabelSelector: c.labelSelector,
+			FieldSelector: c.fieldSelector,
+		}
+
+		responseBytes, err = kubernetes.ListResourcesByNamespace(&host, request)
+	} else {
+		request := kubernetes.ListAllResourcesRequest{
+			APIVersion:    c.apiVersion,
+			Kind:          c.kind,
+			LabelSelector: c.labelSelector,
+			FieldSelector: c.fieldSelector,
+		}
+
+		responseBytes, err = kubernetes.ListResources(&host, request)
+	}
+
 	if err != nil {
 		return types.NewErr("cannot list all Kubernetes resources: %s", err)
 	}
 
 	var response map[string]interface{}
 	if err := json.Unmarshal(responseBytes, &response); err != nil {
-		return types.NewErr("cannot unmarshal Kubernetes all resources response: %s", err)
+		return types.NewErr("cannot unmarshal Kubernetes list resources response: %s", err)
 	}
 
 	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
 }
 
-func listResourcesByNamespace(arg ref.Val) ref.Val {
-	listResourcesByNamespaceRequest, ok := arg.Value().(*kubernetes.ListResourcesByNamespaceRequest)
-	if !ok {
-		return types.MaybeNoSuchOverloadErr(arg)
+// get returns a Kubernetes resource.
+func (c *client) get(name string) ref.Val {
+	request := kubernetes.GetResourceRequest{
+		APIVersion: c.apiVersion,
+		Kind:       c.kind,
+		Name:       name,
+		Namespace:  c.namespace,
 	}
 
-	responseBytes, err := kubernetes.ListResourcesByNamespace(&host, *listResourcesByNamespaceRequest)
-	if err != nil {
-		return types.NewErr("cannot list Kubernetes resources by namespace: %s", err)
-	}
-
-	var response map[string]interface{}
-	if err := json.Unmarshal(responseBytes, &response); err != nil {
-		return types.NewErr("cannot unmarshal Kubernetes resources by namespace response: %s", err)
-	}
-
-	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
-}
-
-func getResource(arg ref.Val) ref.Val {
-	getResourceRequest, ok := arg.Value().(*kubernetes.GetResourceRequest)
-	if !ok {
-		return types.MaybeNoSuchOverloadErr(arg)
-	}
-
-	var response map[string]interface{}
-	responseBytes, err := kubernetes.GetResource(&host, *getResourceRequest)
+	responseBytes, err := kubernetes.GetResource(&host, request)
 	if err != nil {
 		return types.NewErr("cannot get Kubernetes resource: %s", err)
 	}
+
+	var response map[string]interface{}
 	if err := json.Unmarshal(responseBytes, &response); err != nil {
-		return types.NewErr("cannot unmarshal Kubernetes resource response: %s", err)
+		return types.NewErr("cannot unmarshal Kubernetes get resource response: %s", err)
 	}
 
 	return types.NewDynamicMap(types.DefaultTypeAdapter, response)

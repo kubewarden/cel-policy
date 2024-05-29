@@ -9,9 +9,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kubewarden/k8s-objects v1.29.0-kw1
 	github.com/kubewarden/policy-sdk-go v0.8.0
-	github.com/stretchr/testify v1.8.4
-	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/stretchr/testify v1.9.0
 	k8s.io/apiserver v0.29.1
 )
 
@@ -28,6 +26,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/wapc/wapc-guest-tinygo v0.3.3 // indirect
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
 	golang.org/x/text v0.14.0 // indirect

@@ -16,6 +16,7 @@ issues:
 
 skip-dirs:
   - third_party
+  - mocks
 
 linters:
   enable-all: true
