@@ -73,13 +73,30 @@ func TestSigstore(t *testing.T) {
 			true,
 		},
 		{
-			"github verifier",
+			"github verifier (owner and repo)",
 			"kw.sigstore.image('image:latest').annotation('foo', 'bar').github('kubewarden', 'policy-server').verify().digest",
 			"v2/verify",
 			verify.SigstoreGithubActionsVerify{
 				Image: "image:latest",
 				Owner: "kubewarden",
 				Repo:  "policy-server",
+				Annotations: map[string]string{
+					"foo": "bar",
+				},
+			},
+			oci.VerificationResponse{
+				IsTrusted: true,
+				Digest:    "sha256:1234",
+			},
+			"sha256:1234",
+		},
+		{
+			"github verifier (owner)",
+			"kw.sigstore.image('image:latest').annotation('foo', 'bar').github('kubewarden').verify().digest",
+			"v2/verify",
+			verify.SigstoreGithubActionsVerify{
+				Image: "image:latest",
+				Owner: "kubewarden",
 				Annotations: map[string]string{
 					"foo": "bar",
 				},

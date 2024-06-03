@@ -71,9 +71,10 @@ import (
 // github
 //
 // Builds a verifier that verifies sigstore signatures of an image using keyless signatures made via Github Actions.
-// The first argument is the owner and the second argument is the repo.
+// The first argument is the owner and the second argument is the repo (optional).
 //
 //	<VerifierBuilder>.github(<string>, <string>) <GitHubVerifier>
+//	<VerifierBuilder>.github(<string>) <GitHubVerifier>
 //
 // Examples:
 //
@@ -194,10 +195,15 @@ func (*sigstoreLib) CompileOptions() []cel.EnvOption {
 			),
 		),
 		cel.Function("github",
-			cel.MemberOverload("kw_sigstore_verifier_builder_github",
+			cel.MemberOverload("kw_sigstore_verifier_builder_github_owner",
+				[]*cel.Type{sigstoreVerifierBuilderType, cel.StringType},
+				sigstoreGitHubVerifierType,
+				cel.BinaryBinding(sigstoreVerifierBuilderGitHubOwner),
+			),
+			cel.MemberOverload("kw_sigstore_verifier_builder_github_owner_repo",
 				[]*cel.Type{sigstoreVerifierBuilderType, cel.StringType, cel.StringType},
 				sigstoreGitHubVerifierType,
-				cel.FunctionBinding(sigstoreVerifierBuilderGitHub),
+				cel.FunctionBinding(sigstoreVerifierBuilderGitHubOwnerRepo),
 			),
 		),
 		cel.Function("certificate",
@@ -465,7 +471,26 @@ func sigstoreKeylessPrefixVerifierVerify(arg ref.Val) ref.Val {
 	return verifier.verify()
 }
 
-func sigstoreVerifierBuilderGitHub(args ...ref.Val) ref.Val {
+func sigstoreVerifierBuilderGitHubOwner(arg1, arg2 ref.Val) ref.Val {
+	builder, ok := arg1.(sigstoreVerifierBuilder)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg1)
+	}
+
+	owner, ok := arg2.Value().(string)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg2)
+	}
+
+	return sigstoreGitHubVerifier{
+		receiverOnlyObjectVal: receiverOnlyVal(sigstoreGitHubVerifierType),
+		image:                 builder.image,
+		annotations:           builder.annotations,
+		owner:                 owner,
+	}
+}
+
+func sigstoreVerifierBuilderGitHubOwnerRepo(args ...ref.Val) ref.Val {
 	if len(args) != 3 {
 		return types.NoSuchOverloadErr()
 	}
