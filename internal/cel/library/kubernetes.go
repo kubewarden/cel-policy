@@ -22,7 +22,7 @@ import (
 // Examples:
 //
 //	kw.k8s.apiversion('v1') // returns an K8sClientBuilder for the core group
-//	kw.k8s.path('apps/v1') /// returns an K8SClientBuilder for the 'apps' group
+//	kw.k8s.path('apps/v1') // returns an K8SClientBuilder for the 'apps' group
 //
 // kind
 //
