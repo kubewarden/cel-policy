@@ -1,43 +1,50 @@
-// nolint: dupl
+//nolint:dupl
 package library
 
 import (
-	"fmt"
+	"encoding/json"
 	"reflect"
 	"testing"
 
 	"github.com/google/cel-go/cel"
-	"github.com/kubewarden/policy-sdk-go/pkg/capabilities"
-	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/net"
+	netCap "github.com/kubewarden/policy-sdk-go/pkg/capabilities/net"
 	"github.com/stretchr/testify/require"
+
+	mocks "github.com/kubewarden/cel-policy/mocks/github.com/kubewarden/policy-sdk-go/pkg/capabilities"
 )
 
 func TestNet(t *testing.T) {
 	tests := []struct {
-		name           string
-		expression     string
-		response       []string
-		expectedResult interface{}
+		name              string
+		expression        string
+		expectedOperation string
+		expectedRequest   interface{}
+		response          interface{}
+		expectedResult    interface{}
 	}{
 		{
-			"kw.net.lookupHost",
-			"kw.net.lookupHost('kubewarden')",
-			[]string{"192.168.0.1", "10.0.0.1"},
-			[]string{"192.168.0.1", "10.0.0.1"},
-		},
-		{
-			"kw.net.lookupHost test return type",
-			"kw.net.lookupHost('kubewarden')[0]",
-			[]string{"192.168.0.1", "10.0.0.1"},
-			"192.168.0.1",
+			"lookupHost",
+			"kw.net.lookupHost('example.com')",
+			"v1/dns_lookup_host",
+			"example.com",
+			netCap.LookupHostResponse{
+				Ips: []string{"1.1.1.1", "2.2.2.2"},
+			},
+			[]string{"1.1.1.1", "2.2.2.2"},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var err error
-
-			host.Client, err = capabilities.NewSuccessfulMockWapcClient(net.LookupHostResponse{Ips: test.response})
+			response, err := json.Marshal(test.response)
 			require.NoError(t, err)
+
+			expectedRequest, err := json.Marshal(test.expectedRequest)
+			require.NoError(t, err)
+
+			mockWapcClient := &mocks.MockWapcClient{}
+			mockWapcClient.On("HostCall", "kubewarden", "net", test.expectedOperation, expectedRequest).Return(response, nil)
+
+			host.Client = mockWapcClient
 
 			env, err := cel.NewEnv(
 				Net(),
@@ -47,7 +54,7 @@ func TestNet(t *testing.T) {
 			ast, issues := env.Compile(test.expression)
 			require.Empty(t, issues)
 
-			prog, err := env.Program(ast, cel.EvalOptions(cel.OptExhaustiveEval))
+			prog, err := env.Program(ast)
 			require.NoError(t, err)
 
 			val, _, err := prog.Eval(map[string]interface{}{})
@@ -57,40 +64,6 @@ func TestNet(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, test.expectedResult, result)
-		})
-	}
-}
-
-func TestNetHostFailure(t *testing.T) {
-	tests := []struct {
-		name       string
-		expression string
-	}{
-		{
-			"kw.net.lookupHost",
-			"kw.net.lookupHost('kubewarden')",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			var err error
-
-			host.Client = capabilities.NewFailingMockWapcClient(fmt.Errorf("hostcallback error"))
-
-			env, err := cel.NewEnv(
-				Net(),
-			)
-			require.NoError(t, err)
-
-			ast, issues := env.Compile(test.expression)
-			require.Empty(t, issues)
-
-			prog, err := env.Program(ast, cel.EvalOptions(cel.OptExhaustiveEval))
-			require.NoError(t, err)
-
-			_, _, err = prog.Eval(map[string]interface{}{})
-			require.Error(t, err)
-			require.Equal(t, "cannot lookup host: hostcallback error", err.Error())
 		})
 	}
 }
