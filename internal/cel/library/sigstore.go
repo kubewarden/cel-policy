@@ -82,6 +82,7 @@ import (
 // certificate
 //
 // Builds a verifier that verifies sigstore signatures of an image using a user provided certificate.
+// The certificate must be in PEM format.
 //
 //	<VerifierBuilder>.certificate(<string>) <CertificateVerifier>
 //
@@ -92,6 +93,7 @@ import (
 // certificateChain
 //
 // Adds a certificate to the certificate verifier's chain.
+// The certificate must be in PEM format.
 //
 //	<CertificateVerifier>.certificateChain(<string>) <CertificateVerifier>
 //
@@ -102,6 +104,8 @@ import (
 // requireRekorBundle
 //
 // Sets whether the certificate verifier requires a Rekor bundle to be present in the signature.
+// Having a Rekor bundle allows further checks to be performed, e.g. ensuring the signature has been produced during the validity time frame of the cert.
+// It is recommended to set this to `true`.
 //
 //	<CertificateVerifier>.requireRekorBundle(<bool>) <CertificateVerifier>
 //
