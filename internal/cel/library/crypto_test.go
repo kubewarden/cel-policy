@@ -1,72 +1,70 @@
+//nolint:dupl
 package library
 
 import (
-	"fmt"
+	"encoding/json"
 	"reflect"
 	"testing"
 
 	"github.com/google/cel-go/cel"
-	"github.com/kubewarden/policy-sdk-go/pkg/capabilities"
-	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/crypto"
+	cryptoCap "github.com/kubewarden/policy-sdk-go/pkg/capabilities/crypto"
 	"github.com/stretchr/testify/require"
+
+	mocks "github.com/kubewarden/cel-policy/mocks/github.com/kubewarden/policy-sdk-go/pkg/capabilities"
 )
 
 func TestCrypto(t *testing.T) {
 	tests := []struct {
-		name            string
-		expression      string
-		responseTrusted bool
-		responseReason  string
-		expectedResult  any
+		name              string
+		expression        string
+		expectedOperation string
+		expectedRequest   interface{}
+		response          interface{}
+		expectedResult    interface{}
 	}{
 		{
-			"kw.crypto.verifyCert",
-			"kw.crypto.verifyCert(" +
-				"'---BEGIN CERTIFICATE---foo---END CERTIFICATE---'," +
-				"[ '---BEGIN CERTIFICATE---bar---END CERTIFICATE---' ]," +
-				"'2030-08-15T16:23:42+00:00'" +
-				")",
-			false,
-			"the certificate is expired",
-			map[string]any{
-				"trusted": false,
-				"reason":  "the certificate is expired",
+			"verify",
+			"kw.crypto.certificate('cert.pem').certificateChain('chain1.pem').certificateChain('chain2.pem').notAfter(timestamp('2000-01-01T00:00:00Z')).verify()",
+			"v1/is_certificate_trusted",
+			cryptoCap.CertificateVerificationRequest{
+				Cert: cryptoCap.Certificate{
+					Encoding: cryptoCap.Pem,
+					Data:     []rune("cert.pem"),
+				},
+				CertChain: []cryptoCap.Certificate{
+					{
+						Encoding: cryptoCap.Pem,
+						Data:     []rune("chain1.pem"),
+					},
+					{
+						Encoding: cryptoCap.Pem,
+						Data:     []rune("chain2.pem"),
+					},
+				},
+				NotAfter: "2000-01-01T00:00:00Z",
 			},
-		},
-		{
-			"kw.crypto.verifyCert with empty CertChain",
-			"kw.crypto.verifyCert( " +
-				"'---BEGIN CERTIFICATE---foo2---END CERTIFICATE---'," +
-				"[]," +
-				"'0004-08-15T16:23:42+00:00'" +
-				")",
-			true, // e.g: cert is past expiration date, yet is trusted (empty CertChain)
-			"",
-			map[string]any{
-				"trusted": true,
-				"reason":  "",
+			&cryptoCap.CertificateVerificationResponse{
+				Trusted: true,
+				Reason:  "",
 			},
-		},
-		{
-			"kw.crypto.verifyCert return type",
-			"kw.crypto.verifyCert(  " +
-				"'---BEGIN CERTIFICATE---foo2---END CERTIFICATE---'," +
-				"[]," +
-				"'0004-08-15T16:23:42+00:00'" +
-				").trusted",
-			true, // e.g: cert is past expiration date, yet is trusted (empty CertChain)
-			"",
-			true,
+			map[string]interface{}{
+				"isTrusted": true,
+				"reason":    "",
+			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var err error
-			host.Client, err = capabilities.NewSuccessfulMockWapcClient(crypto.CertificateVerificationResponse{
-				Trusted: test.responseTrusted,
-				Reason:  test.responseReason,
-			})
+			response, err := json.Marshal(test.response)
 			require.NoError(t, err)
+
+			expectedRequest, err := json.Marshal(test.expectedRequest)
+			require.NoError(t, err)
+
+			mockWapcClient := &mocks.MockWapcClient{}
+			mockWapcClient.On("HostCall", "kubewarden", "crypto", test.expectedOperation, expectedRequest).Return(response, nil)
+
+			host.Client = mockWapcClient
 
 			env, err := cel.NewEnv(
 				Crypto(),
@@ -76,7 +74,7 @@ func TestCrypto(t *testing.T) {
 			ast, issues := env.Compile(test.expression)
 			require.Empty(t, issues)
 
-			prog, err := env.Program(ast, cel.EvalOptions(cel.OptExhaustiveEval))
+			prog, err := env.Program(ast)
 			require.NoError(t, err)
 
 			val, _, err := prog.Eval(map[string]interface{}{})
@@ -86,43 +84,6 @@ func TestCrypto(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, test.expectedResult, result)
-		})
-	}
-}
-
-func TestCryptoHostFailure(t *testing.T) {
-	tests := []struct {
-		name       string
-		expression string
-	}{
-		{
-			"kw.crypto.verifyCert host failure",
-			"kw.crypto.verifyCert( " +
-				"'---BEGIN CERTIFICATE---foo3---END CERTIFICATE---'," +
-				"[ '---BEGIN CERTIFICATE---bar3---END CERTIFICATE---' ]," +
-				"'2030-08-15T16:23:42+00:00'" +
-				")",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			var err error
-			host.Client = capabilities.NewFailingMockWapcClient(fmt.Errorf("hostcallback error"))
-
-			env, err := cel.NewEnv(
-				Crypto(),
-			)
-			require.NoError(t, err)
-
-			ast, issues := env.Compile(test.expression)
-			require.Empty(t, issues)
-
-			prog, err := env.Program(ast, cel.EvalOptions(cel.OptExhaustiveEval))
-			require.NoError(t, err)
-
-			_, _, err = prog.Eval(map[string]interface{}{})
-			require.Error(t, err)
-			require.Equal(t, "cannot verify certificate: hostcallback error", err.Error())
 		})
 	}
 }

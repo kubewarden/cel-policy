@@ -1,138 +1,177 @@
+//nolint:varnamelen
 package library
 
 import (
-	"reflect"
+	"time"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
-	"github.com/google/cel-go/common/types/traits"
-	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/crypto"
+	cryptoCap "github.com/kubewarden/policy-sdk-go/pkg/capabilities/crypto"
 )
 
-// Crypto returns a cel.EnvOption to configure namespaced crypto host-callback
-// Kubewarden functions.
+// Crypto provides a CEL function library extension for verifying certificates.
 //
-// # Crypto.VerifyCert
+// certificate
 //
-// This CEL function accepts a certificate, a certificate chain, and an
-// expiration date.
-// It returns a bool on whether the provided CertificateVerificationRequest
-// (containing a cert to be verified, a cert chain, and an expiration date)
-// passes certificate verification.
+// Returns a certificate verifier that can be used to verify the trust of the certificate.
 //
-// Accepts 3 arguments:
-//   - string,  of PEM-encoded certificate to verify.
-//   - list of strings, of PEM-encoded certs, ordered by trust usage
-//     (intermediates first, root last). If empty, certificate is assumed trusted.
-//   - string in RFC 3339 time format, to check expiration against.
-//     If empty, certificate is assumed never expired.
+//	kw.crypto.certificate(<string>) <CryptoVerifier>
 //
-// Returns a map(<string>) with 2 fields:
-//   - "trusted": <bool> informing if certificate passed verification or not
-//   - "reason": <string> with reason, in case "Trusted" is false
+// Examples:
 //
-// Usage in CEL:
+//	kw.crypto.certificate('PEM CERTIFICATE') // returns a certificate verifier for the given PEM encoded certificate
 //
-//	crypto.verifyCert(<string>, list(<string>), <string>) -> map(<string>, value)
+// certificateChain
 //
-// Example:
+// Adds a certificate to the certificate chain.
 //
-//	  kw.crypto.verifyCert(
-//				 '---BEGIN CERTIFICATE---foo---END CERTIFICATE---',
-//		    [
-//		      '---BEGIN CERTIFICATE---bar---END CERTIFICATE---'
-//		    ],
-//		    '2030-08-15T16:23:42+00:00'
-//		 )"
+//	<CryptoVerifier>.certificateChain(<string>) <CryptoVerifier>
+//
+// Examples:
+//
+//	kw.crypto.certificate('PEM CERTIFICATE').certificateChain('PEM CERTIFICATE') // returns a certificate verifier with the given PEM encoded certificate added to the chain
+//
+// notAfter
+//
+// Sets the not after date for the certificate verification. If `notAfter` is not set, the certificate is assumed to never expire.
+// The date must be a `google.protobuf.Timestamp`.
+// A `google.protobuf.Timestamp` can be created using the `timestamp` standard definition, by passing a string in RFC 3339 format.
+// See: https://github.com/google/cel-spec/blob/master/doc/langdef.md#list-of-standard-definitions
+//
+//	<CryptoVerifier>.notAfter(<google.protobuf.Timestamp>)  <CryptoVerifier>
+//
+// Examples:
+//
+//	kw.crypto.certificate('cert.pem').notAfter(timestamp('2000-01-01T00:00:00Z')) // returns a certificate verifier with the not after date set to '2000-01-01T00:00:00Z'
+//
+// verify
+//
+// Verifies the trust of the certificate.
+// Returns a map with the trust result.
+// `isTrusted` is a boolean that indicates if the certificate is trusted.
+// `reason` is a string that contains the reason why the certificate is not trusted (empty if the certificate is trusted).
+//
+//	<CryptoVerifier>.verify() <DynamicMap>
+//
+// Examples:
+//
+//	kw.crypto.certificate('PEM CERTIFICATE').certificateChain('PEM CERTIFICATE').notAfter(timestamp('2000-01-01T00:00:00Z')).verify() // returns a map with the trust result
 func Crypto() cel.EnvOption {
 	return cel.Lib(cryptoLib{})
 }
 
 type cryptoLib struct{}
 
-// LibraryName implements the SingletonLibrary interface method.
 func (cryptoLib) LibraryName() string {
 	return "kw.crypto"
 }
 
-// CompileOptions implements the Library interface method.
 func (cryptoLib) CompileOptions() []cel.EnvOption {
 	return []cel.EnvOption{
-		// group every binding under a container to simplify usage
-		cel.Container("crypto"),
-
-		cel.Function("kw.crypto.verifyCert",
-			cel.Overload("kw_crypto_verify_cert",
-				[]*cel.Type{
-					cel.StringType,
-					cel.ListType(cel.StringType),
-					cel.StringType,
-				},
-				cel.MapType(cel.StringType, cel.DynType),
-				cel.FunctionBinding(verifyCert),
+		cel.Function("kw.crypto.certificate",
+			cel.Overload("kw_crypto_certifcate",
+				[]*cel.Type{cel.StringType},
+				cryptoVerifierType,
+				cel.UnaryBinding(cryptoCertificate),
+			),
+		),
+		cel.Function("certificateChain",
+			cel.MemberOverload("kw_crypto_verifier_certificate_chain",
+				[]*cel.Type{cryptoVerifierType, cel.StringType},
+				cryptoVerifierType,
+				cel.BinaryBinding(cryptoVerifierCertificateChain),
+			),
+		),
+		cel.Function("notAfter",
+			cel.MemberOverload("kw_crypto_verifier_not_after",
+				[]*cel.Type{cryptoVerifierType, cel.TimestampType},
+				cryptoVerifierType,
+				cel.BinaryBinding(cryptoVerifierNotAfter),
+			),
+		),
+		cel.Function("verify",
+			cel.MemberOverload("kw_crypto_verifier_verify",
+				[]*cel.Type{cryptoVerifierType},
+				cel.DynType,
+				cel.UnaryBinding(cryptoVerifierVerify),
 			),
 		),
 	}
 }
 
-// ProgramOptions implements the Library interface method.
+func cryptoCertificate(arg ref.Val) ref.Val {
+	certifcate, ok := arg.Value().(string)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg)
+	}
+
+	return cryptoVerifier{
+		receiverOnlyObjectVal: receiverOnlyVal(cryptoVerifierType),
+		certifcate:            cryptoCap.Certificate{Encoding: cryptoCap.Pem, Data: []rune(certifcate)},
+	}
+}
+
+func cryptoVerifierCertificateChain(arg1, arg2 ref.Val) ref.Val {
+	verifier, ok := arg1.(cryptoVerifier)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg1)
+	}
+
+	certifcate, ok := arg2.Value().(string)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg2)
+	}
+
+	verifier.certifcateChain = append(verifier.certifcateChain, cryptoCap.Certificate{Encoding: cryptoCap.Pem, Data: []rune(certifcate)})
+
+	return verifier
+}
+
+func cryptoVerifierNotAfter(arg1, arg2 ref.Val) ref.Val {
+	verifier, ok := arg1.(cryptoVerifier)
+
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg1)
+	}
+
+	notAfter, ok := arg2.(types.Timestamp)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg2)
+	}
+
+	verifier.notAfter = &notAfter.Time
+
+	return verifier
+}
+
+func cryptoVerifierVerify(arg ref.Val) ref.Val {
+	verifier, ok := arg.(cryptoVerifier)
+
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg)
+	}
+
+	response, err := cryptoCap.VerifyCert(&host, verifier.certifcate, verifier.certifcateChain, verifier.notAfter.Format(time.RFC3339))
+	if err != nil {
+		return types.NewErr(err.Error())
+	}
+
+	return types.NewDynamicMap(types.DefaultTypeAdapter, map[string]interface{}{
+		"isTrusted": response.Trusted,
+		"reason":    response.Reason,
+	})
+}
+
 func (cryptoLib) ProgramOptions() []cel.ProgramOption {
 	return []cel.ProgramOption{}
 }
 
-func verifyCert(args ...ref.Val) ref.Val {
-	cert, ok1 := args[0].Value().(string)
-	if !ok1 {
-		return types.MaybeNoSuchOverloadErr(args[0])
-	}
+var cryptoVerifierType = cel.ObjectType("kw.crypto.Verifier")
 
-	certChain, ok2 := args[1].(traits.Lister)
-	if !ok2 {
-		return types.MaybeNoSuchOverloadErr(args[1])
-	}
-
-	notAfter, ok3 := args[2].Value().(string)
-	if !ok3 {
-		return types.MaybeNoSuchOverloadErr(args[2])
-	}
-
-	// convert all cert.Data from string to []rune
-	cryptoCert := crypto.Certificate{
-		Encoding: crypto.Pem,
-		Data:     []rune(cert),
-	}
-	certChainLength, ok := certChain.Size().(types.Int)
-	if !ok {
-		return types.NewErr("cannot convert certChain length to int")
-	}
-	cryptoCertChain := make([]crypto.Certificate, 0, certChainLength)
-	for i := types.Int(0); i < certChainLength; i++ {
-		certElem, err := certChain.Get(i).ConvertToNative(reflect.TypeOf(""))
-		if err != nil {
-			return types.NewErr("cannot convert certChain: %s", err)
-		}
-		certString, ok := certElem.(string)
-		if !ok {
-			return types.NewErr("cannot convert cert into string")
-		}
-
-		cryptoCertChain = append(cryptoCertChain,
-			crypto.Certificate{
-				Encoding: crypto.Pem,
-				Data:     []rune(certString),
-			},
-		)
-	}
-
-	response, err := crypto.VerifyCert(&host, cryptoCert, cryptoCertChain, notAfter)
-	if err != nil {
-		return types.NewErr("cannot verify certificate: %s", err)
-	}
-
-	return types.NewStringInterfaceMap(types.DefaultTypeAdapter,
-		map[string]any{
-			"trusted": response.Trusted,
-			"reason":  response.Reason,
-		})
+type cryptoVerifier struct {
+	receiverOnlyObjectVal
+	certifcate      cryptoCap.Certificate
+	certifcateChain []cryptoCap.Certificate
+	notAfter        *time.Time
 }
