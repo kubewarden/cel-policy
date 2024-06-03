@@ -17,18 +17,18 @@ import (
 // Returns a scoped client builder that can be used to build a client object for a specific API version.
 // (v1 for core group, groupName/groupVersions for other).
 //
-//	kw.k8s.apiVersion(<string>) <APIVersionClient>
+//	kw.k8s.apiVersion(<string>) <K8sClientBuilder>
 //
 // Examples:
 //
-//	kw.k8s.apiversion('v1') // returns an APIVersionClient for the core group
-//	kw.k8s.path('apps/v1') /// returns an APIVersionClient for the 'apps' group
+//	kw.k8s.apiversion('v1') // returns an K8sClientBuilder for the core group
+//	kw.k8s.path('apps/v1') // returns an K8SClientBuilder for the 'apps' group
 //
 // kind
 //
-// Returns a Client object configured to list or get resources of the provided kind.
+// Returns a client configured to list or get resources of the provided kind.
 //
-//	<APIVersionClient>.kind(<string>) <Client>
+//	<K8sClientBuilder>.kind(<string>) <K8sClient>
 //
 // Examples:
 //
@@ -37,41 +37,41 @@ import (
 //
 // namespace
 //
-// Returns a Client object configured to list or get resources in the provided namespace.
+// Returns a client configured to list or get resources in the provided namespace.
 //
-//	<Client>.namespace(<string>) <Client>
+//	<K8sClient>.namespace(<string>) <K8sClient>
 //
 // Examples:
 //
-//	kw.k8s.apiVersion('v1').kind('Pod').namespace('default') // returns a Client for the 'Pod' resources in the core group in the 'default' namespace
+//	kw.k8s.apiVersion('v1').kind('Pod').namespace('default') // returns a K8sClient for the 'Pod' resources in the core group in the 'default' namespace
 //
 // labelSelector
 //
-// Returns a Client object configured to list resources with the provided label selector.
+// Returns a client configured to list resources with the provided label selector.
 // NOTE: this is ignored for get operations. The label selector should be a valid Kubernetes label selector.
 //
-//	<Client>.labelSelector(<string>) <Client>
+//	<K8sClient>.labelSelector(<string>) <K8sClient>
 //
 // Examples:
 //
-//	kw.k8s.apiVersion('v1').kind('Pod').labelSelector('app=nginx') // returns a Client for the 'Pod' resources in the core group with the label selector 'app=nginx'
+//	kw.k8s.apiVersion('v1').kind('Pod').labelSelector('app=nginx') // returns a K8sClient for the 'Pod' resources in the core group with the label selector 'app=nginx'
 //
 // fieldSelector
 //
-// Returns a Client object configured to list resources with the provided field selector.
+// Returns a client configured to list resources with the provided field selector.
 // NOTE: this is ignored for get operations. The field selector should be a valid Kubernetes field selector.
 //
-//	<Client>.fieldSelector(<string>) <Client>
+//	<K8sClient>.fieldSelector(<string>) <K8sClient>
 //
 // Examples:
 //
-//	kw.k8s.apiVersion('v1').kind('Pod').fieldSelector('status.phase=Running') // returns a Client for the 'Pod' resources in the core group with the field selector 'status.phase=Running'
+//	kw.k8s.apiVersion('v1').kind('Pod').fieldSelector('status.phase=Running') // returns a K8sClient for the 'Pod' resources in the core group with the field selector 'status.phase=Running'
 //
 // list
 //
 // Returns a list of Kubernetes resources matching the client configuration.
 //
-//	<Client>.list() <objectList>
+//	<K8sClient>.list() <objectList>
 //
 // Examples:
 //
@@ -85,7 +85,7 @@ import (
 // Returns a Kubernetes resource matching the provided name.
 // If a resource is namespaced, the namespace should be set using the namespace method.
 //
-//	<Client>.get(<string>) <object>
+//	<K8sClient>.get(<string>) <object>
 //
 // Examples:
 //
@@ -108,50 +108,50 @@ func (*kubernetesLib) CompileOptions() []cel.EnvOption {
 		cel.Function("kw.k8s.apiVersion",
 			cel.Overload("kw_k8s_api_version",
 				[]*cel.Type{cel.StringType},
-				apiVersionClientType,
+				k8sClientBuilderType,
 				cel.UnaryBinding(apiVersion),
 			),
 		),
 		cel.Function("kind",
 			cel.MemberOverload("kw_k8s_kind",
-				[]*cel.Type{apiVersionClientType, cel.StringType},
-				clientType,
-				cel.BinaryBinding(kind),
+				[]*cel.Type{k8sClientBuilderType, cel.StringType},
+				k8sClientType,
+				cel.BinaryBinding(k8sClientBuilderKind),
 			),
 		),
 		cel.Function("namespace",
 			cel.MemberOverload("kw_k8s_namespace",
-				[]*cel.Type{clientType, cel.StringType},
-				clientType,
-				cel.BinaryBinding(namespace),
+				[]*cel.Type{k8sClientType, cel.StringType},
+				k8sClientType,
+				cel.BinaryBinding(k8sClientNamespace),
 			),
 		),
 		cel.Function("labelSelector",
 			cel.MemberOverload("kw_k8s_label_selector",
-				[]*cel.Type{clientType, cel.StringType},
-				clientType,
-				cel.BinaryBinding(labelSelector),
+				[]*cel.Type{k8sClientType, cel.StringType},
+				k8sClientType,
+				cel.BinaryBinding(k8sClientLabelSelector),
 			),
 		),
 		cel.Function("fieldSelector",
 			cel.MemberOverload("kw_k8s_field_selector",
-				[]*cel.Type{clientType, cel.StringType},
-				clientType,
-				cel.BinaryBinding(fieldSelector),
+				[]*cel.Type{k8sClientType, cel.StringType},
+				k8sClientType,
+				cel.BinaryBinding(k8sClientFieldSelector),
 			),
 		),
 		cel.Function("list",
 			cel.MemberOverload("kw_k8s_list",
-				[]*cel.Type{clientType},
+				[]*cel.Type{k8sClientType},
 				cel.DynType,
-				cel.UnaryBinding(list),
+				cel.UnaryBinding(k8sClientList),
 			),
 		),
 		cel.Function("get",
 			cel.MemberOverload("kw_k8s_get",
-				[]*cel.Type{clientType, cel.StringType},
+				[]*cel.Type{k8sClientType, cel.StringType},
 				cel.DynType,
-				cel.BinaryBinding(get),
+				cel.BinaryBinding(k8sClientGet),
 			),
 		),
 	}
@@ -167,11 +167,11 @@ func apiVersion(arg ref.Val) ref.Val {
 		return types.MaybeNoSuchOverloadErr(arg)
 	}
 
-	return apiVersionClient{receiverOnlyObjectVal: receiverOnlyVal(apiVersionClientType), apiVersion: apiVersion}
+	return k8sClientBuilder{receiverOnlyObjectVal: receiverOnlyVal(k8sClientBuilderType), apiVersion: apiVersion}
 }
 
-func kind(arg1, arg2 ref.Val) ref.Val {
-	apiVersionClient, ok := arg1.(apiVersionClient)
+func k8sClientBuilderKind(arg1, arg2 ref.Val) ref.Val {
+	apiVersionClient, ok := arg1.(k8sClientBuilder)
 	if !ok {
 		panic(apiVersionClient)
 	}
@@ -181,11 +181,11 @@ func kind(arg1, arg2 ref.Val) ref.Val {
 		return types.MaybeNoSuchOverloadErr(arg2)
 	}
 
-	return client{receiverOnlyObjectVal: receiverOnlyVal(clientType), apiVersion: apiVersionClient.apiVersion, kind: kind}
+	return k8sClient{receiverOnlyObjectVal: receiverOnlyVal(k8sClientType), apiVersion: apiVersionClient.apiVersion, kind: kind}
 }
 
-func namespace(arg1, arg2 ref.Val) ref.Val {
-	client, ok := arg1.(client)
+func k8sClientNamespace(arg1, arg2 ref.Val) ref.Val {
+	client, ok := arg1.(k8sClient)
 	if !ok {
 		return types.MaybeNoSuchOverloadErr(arg1)
 	}
@@ -200,8 +200,8 @@ func namespace(arg1, arg2 ref.Val) ref.Val {
 	return client
 }
 
-func labelSelector(arg1, arg2 ref.Val) ref.Val {
-	client, ok := arg1.(client)
+func k8sClientLabelSelector(arg1, arg2 ref.Val) ref.Val {
+	client, ok := arg1.(k8sClient)
 	if !ok {
 		return types.MaybeNoSuchOverloadErr(arg1)
 	}
@@ -216,8 +216,8 @@ func labelSelector(arg1, arg2 ref.Val) ref.Val {
 	return client
 }
 
-func fieldSelector(arg1, arg2 ref.Val) ref.Val {
-	client, ok := arg1.(client)
+func k8sClientFieldSelector(arg1, arg2 ref.Val) ref.Val {
+	client, ok := arg1.(k8sClient)
 	if !ok {
 		return types.MaybeNoSuchOverloadErr(arg1)
 	}
@@ -232,8 +232,8 @@ func fieldSelector(arg1, arg2 ref.Val) ref.Val {
 	return client
 }
 
-func list(arg ref.Val) ref.Val {
-	client, ok := arg.(client)
+func k8sClientList(arg ref.Val) ref.Val {
+	client, ok := arg.(k8sClient)
 	if !ok {
 		return types.MaybeNoSuchOverloadErr(arg)
 	}
@@ -241,8 +241,8 @@ func list(arg ref.Val) ref.Val {
 	return client.list()
 }
 
-func get(arg1 ref.Val, arg2 ref.Val) ref.Val {
-	client, ok := arg1.(client)
+func k8sClientGet(arg1 ref.Val, arg2 ref.Val) ref.Val {
+	client, ok := arg1.(k8sClient)
 	if !ok {
 		return types.MaybeNoSuchOverloadErr(arg1)
 	}
@@ -255,20 +255,20 @@ func get(arg1 ref.Val, arg2 ref.Val) ref.Val {
 	return client.get(name)
 }
 
-var apiVersionClientType = cel.ObjectType("kw.k8s.APIVersionClient")
+var k8sClientBuilderType = cel.ObjectType("kw.k8s.K8sClientBuilder")
 
-// apiVersionClient is an intermediate object that holds the API version.
+// k8sClientBuilder is an intermediate object that holds the API version.
 // It is used to build the client object.
-type apiVersionClient struct {
+type k8sClientBuilder struct {
 	receiverOnlyObjectVal
 	apiVersion string
 }
 
-var clientType = cel.ObjectType("kw.k8s.Client")
+var k8sClientType = cel.ObjectType("kw.k8s.K8sClient")
 
-// client is the object that holds the Kubernetes client configuration
+// k8sClient is the object that holds the Kubernetes k8sClient configuration
 // and exposes the list and get functions.
-type client struct {
+type k8sClient struct {
 	receiverOnlyObjectVal
 	apiVersion    string
 	kind          string
@@ -278,7 +278,7 @@ type client struct {
 }
 
 // list returns a list of Kubernetes resources.
-func (c *client) list() ref.Val {
+func (c *k8sClient) list() ref.Val {
 	var responseBytes []byte
 	var err error
 	if c.namespace != nil {
@@ -315,7 +315,7 @@ func (c *client) list() ref.Val {
 }
 
 // get returns a Kubernetes resource.
-func (c *client) get(name string) ref.Val {
+func (c *k8sClient) get(name string) ref.Val {
 	request := kubernetes.GetResourceRequest{
 		APIVersion: c.apiVersion,
 		Kind:       c.kind,

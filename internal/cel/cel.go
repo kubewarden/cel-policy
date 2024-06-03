@@ -62,6 +62,8 @@ func NewCompiler() (*Compiler, error) {
 
 		// Kubewarden host capabilities libraries
 		library.Kubernetes(),
+		library.OCI(),
+		library.Sigstore(),
 		library.Net(),
 	)
 	if err != nil {

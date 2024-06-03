@@ -8,7 +8,9 @@ require (
 	github.com/google/cel-go v0.20.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kubewarden/k8s-objects v1.29.0-kw1
-	github.com/kubewarden/policy-sdk-go v0.8.0
+	// TODO: change this once the policy-sdk-go module is updated to v0.8.1
+	github.com/kubewarden/policy-sdk-go v0.8.1-0.20240531072807-c4527b9da44d
+	github.com/opencontainers/image-spec v1.1.0
 	github.com/stretchr/testify v1.9.0
 	k8s.io/apiserver v0.29.1
 )
@@ -24,6 +26,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-openapi/strfmt v0.21.3 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
