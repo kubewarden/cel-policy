@@ -17,18 +17,18 @@ import (
 // Returns a scoped client builder that can be used to build a client object for a specific API version.
 // (v1 for core group, groupName/groupVersions for other).
 //
-//	kw.k8s.apiVersion(<string>) <K8sClientBuilder>
+//	kw.k8s.apiVersion(<string>) <ClientBuilder>
 //
 // Examples:
 //
-//	kw.k8s.apiversion('v1') // returns an K8sClientBuilder for the core group
-//	kw.k8s.path('apps/v1') // returns an K8SClientBuilder for the 'apps' group
+//	kw.k8s.apiversion('v1') // returns an ClientBuilder for the core group
+//	kw.k8s.path('apps/v1') // returns an ClientBuilder for the 'apps' group
 //
 // kind
 //
 // Returns a client configured to list or get resources of the provided kind.
 //
-//	<K8sClientBuilder>.kind(<string>) <K8sClient>
+//	<ClientBuilder>.kind(<string>) <Client>
 //
 // Examples:
 //
@@ -39,39 +39,39 @@ import (
 //
 // Returns a client configured to list or get resources in the provided namespace.
 //
-//	<K8sClient>.namespace(<string>) <K8sClient>
+//	<Client>.namespace(<string>) <Client>
 //
 // Examples:
 //
-//	kw.k8s.apiVersion('v1').kind('Pod').namespace('default') // returns a K8sClient for the 'Pod' resources in the core group in the 'default' namespace
+//	kw.k8s.apiVersion('v1').kind('Pod').namespace('default') // returns a Client for the 'Pod' resources in the core group in the 'default' namespace
 //
 // labelSelector
 //
 // Returns a client configured to list resources with the provided label selector.
 // NOTE: this is ignored for get operations. The label selector should be a valid Kubernetes label selector.
 //
-//	<K8sClient>.labelSelector(<string>) <K8sClient>
+//	<Client>.labelSelector(<string>) <Client>
 //
 // Examples:
 //
-//	kw.k8s.apiVersion('v1').kind('Pod').labelSelector('app=nginx') // returns a K8sClient for the 'Pod' resources in the core group with the label selector 'app=nginx'
+//	kw.k8s.apiVersion('v1').kind('Pod').labelSelector('app=nginx') // returns a Client for the 'Pod' resources in the core group with the label selector 'app=nginx'
 //
 // fieldSelector
 //
 // Returns a client configured to list resources with the provided field selector.
 // NOTE: this is ignored for get operations. The field selector should be a valid Kubernetes field selector.
 //
-//	<K8sClient>.fieldSelector(<string>) <K8sClient>
+//	<Client>.fieldSelector(<string>) <Client>
 //
 // Examples:
 //
-//	kw.k8s.apiVersion('v1').kind('Pod').fieldSelector('status.phase=Running') // returns a K8sClient for the 'Pod' resources in the core group with the field selector 'status.phase=Running'
+//	kw.k8s.apiVersion('v1').kind('Pod').fieldSelector('status.phase=Running') // returns a Client for the 'Pod' resources in the core group with the field selector 'status.phase=Running'
 //
 // list
 //
 // Returns a list of Kubernetes resources matching the client configuration.
 //
-//	<K8sClient>.list() <objectList>
+//	<Client>.list() <objectList>
 //
 // Examples:
 //
@@ -85,14 +85,13 @@ import (
 // Returns a Kubernetes resource matching the provided name.
 // If a resource is namespaced, the namespace should be set using the namespace method.
 //
-//	<K8sClient>.get(<string>) <object>
+//	<Client>.get(<string>) <object>
 //
 // Examples:
 //
 //	kw.k8s.apiVersion('v1').kind('Pod').namespace('default').get('nginx') // returns the 'Pod' resource with the name 'nginx' in the 'default' namespace
 //	kw.k8s.apiVersion('v1').kind('Pod').get('nginx') // error, 'Pod' resources are namespaced and the namespace must be set
 //	kw.k8s.apiVersion('v1').kind('Namespace').get('default') // returns the 'Namespace' resource with the name 'default'
-
 func Kubernetes() cel.EnvOption {
 	return cel.Lib(&kubernetesLib{})
 }
@@ -255,7 +254,7 @@ func k8sClientGet(arg1 ref.Val, arg2 ref.Val) ref.Val {
 	return client.get(name)
 }
 
-var k8sClientBuilderType = cel.ObjectType("kw.k8s.K8sClientBuilder")
+var k8sClientBuilderType = cel.ObjectType("kw.k8s.ClientBuilder")
 
 // k8sClientBuilder is an intermediate object that holds the API version.
 // It is used to build the client object.
@@ -264,7 +263,7 @@ type k8sClientBuilder struct {
 	apiVersion string
 }
 
-var k8sClientType = cel.ObjectType("kw.k8s.K8sClient")
+var k8sClientType = cel.ObjectType("kw.k8s.Client")
 
 // k8sClient is the object that holds the Kubernetes k8sClient configuration
 // and exposes the list and get functions.
