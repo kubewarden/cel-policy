@@ -84,6 +84,20 @@ spec:
   backgroundAudit: false
 ```
 
+## Host capabilities
+
+Kubewarden's [host capabilities](https://docs.kubewarden.io/reference/spec/host-capabilities/intro-host-capabilities) can be accessed by CEL extension libraries available in the policy environment.
+
+The following host capabilities are available:
+
+| Capability                                                                                          | Description                                   | Documentation                                                                                     |
+| --------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| [kubernetes](https://docs.kubewarden.io/reference/spec/host-capabilities/kubernetes)                | Access to Kubernetes resources in the cluster | [Kubernetes](https://pkg.go.dev/github.com/kubewarden/cel-policy/internal/cel/library#Kubernetes) |
+| [sigstore](https://docs.kubewarden.io/reference/spec/host-capabilities/signature-verifier-policies) | Sigstore (secure supply chain) support        | [Sigstore](https://pkg.go.dev/github.com/kubewarden/cel-policy/internal/cel/library#Sigstore)     |
+| [oci](https://docs.kubewarden.io/reference/spec/host-capabilities/container-registry)               | Interact with container registries            | [OCI](https://pkg.go.dev/github.com/kubewarden/cel-policy/internal/cel/library#OCI)               |
+| [crypto](https://docs.kubewarden.io/reference/spec/host-capabilities/crypto)                        | Host-side cryptographic functions             | [Crypto](https://pkg.go.dev/github.com/kubewarden/cel-policy/internal/cel/library#Crypto)         |
+| [net](https://docs.kubewarden.io/reference/spec/host-capabilities/net)                              | Network operations                            | [Net](https://pkg.go.dev/github.com/kubewarden/cel-policy/internal/cel/library#Net)               |
+
 ## Known limitations
 
 At the moment the policy does not support the following Kubernetes extensions:
