@@ -7,7 +7,8 @@ import (
 	"github.com/kubewarden/cel-policy/internal/settings"
 	corev1 "github.com/kubewarden/k8s-objects/api/core/v1"
 	metav1 "github.com/kubewarden/k8s-objects/apimachinery/pkg/apis/meta/v1"
-	"github.com/kubewarden/policy-sdk-go/pkg/capabilities"
+	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/kubernetes"
+	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/mocks"
 	kubewardenProtocol "github.com/kubewarden/policy-sdk-go/protocol"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -168,13 +169,24 @@ func TestValidate(t *testing.T) {
 	}
 
 	// Override the host capabilities client with a mock client
-	var err error
-	host.Client, err = capabilities.NewSuccessfulMockWapcClient(&corev1.Namespace{
+	request, err := json.Marshal(&kubernetes.GetResourceRequest{
+		APIVersion: "v1",
+		Kind:       "Namespace",
+		Name:       "default",
+	})
+	require.NoError(t, err)
+
+	response, err := json.Marshal(&corev1.Namespace{
 		Metadata: &metav1.ObjectMeta{
 			Name: "default",
 		},
 	})
 	require.NoError(t, err)
+
+	mockWapcClient := &mocks.MockWapcClient{}
+	mockWapcClient.On("HostCall", "kubewarden", "kubernetes", "get_resource", request).Return(response, nil)
+
+	host.Client = mockWapcClient
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/cel-go/cel"
 	cryptoCap "github.com/kubewarden/policy-sdk-go/pkg/capabilities/crypto"
-	"github.com/stretchr/testify/require"
 
-	mocks "github.com/kubewarden/cel-policy/mocks/github.com/kubewarden/policy-sdk-go/pkg/capabilities"
+	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/mocks"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCrypto(t *testing.T) {

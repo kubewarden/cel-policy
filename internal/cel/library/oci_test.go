@@ -7,12 +7,13 @@ import (
 	"testing"
 
 	"github.com/google/cel-go/cel"
-	"github.com/stretchr/testify/require"
 
-	mocks "github.com/kubewarden/cel-policy/mocks/github.com/kubewarden/policy-sdk-go/pkg/capabilities"
 	manifestCap "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/manifest"
 	manifestDigestCap "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/manifest_digest"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
+
+	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/mocks"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOCI(t *testing.T) {
