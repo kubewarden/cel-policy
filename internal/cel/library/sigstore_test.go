@@ -7,11 +7,12 @@ import (
 	"testing"
 
 	"github.com/google/cel-go/cel"
-	"github.com/stretchr/testify/require"
 
-	mocks "github.com/kubewarden/cel-policy/mocks/github.com/kubewarden/policy-sdk-go/pkg/capabilities"
 	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci"
 	verify "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/verify_v2"
+
+	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/mocks"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSigstore(t *testing.T) {

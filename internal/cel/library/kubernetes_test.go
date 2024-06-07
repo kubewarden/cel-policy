@@ -10,9 +10,9 @@ import (
 	corev1 "github.com/kubewarden/k8s-objects/api/core/v1"
 	metav1 "github.com/kubewarden/k8s-objects/apimachinery/pkg/apis/meta/v1"
 	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/kubernetes"
-	"github.com/stretchr/testify/require"
 
-	mocks "github.com/kubewarden/cel-policy/mocks/github.com/kubewarden/policy-sdk-go/pkg/capabilities"
+	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/mocks"
+	"github.com/stretchr/testify/require"
 )
 
 func TestKubernetes(t *testing.T) {
