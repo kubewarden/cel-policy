@@ -117,21 +117,21 @@ import (
 // verify
 //
 // Verifies the signature of an image using the verifier.
-// Returns a map with the keys 'isTrusted' and 'digest'.
+// Returns a Response object with the methods `isTrusted()` and `digest()` to check the trust of the signature and get the digest of the image respectively.
 //
-//	<PubKeysVerifier>.verify() <DynamicMap>
-//	<KeylessVerifier>.verify() <DynamicMap>
-//	<KeylessPrefixVerifier>.verify() <DynamicMap>
-//	<GitHubActionVerifier>.verify() <DynamicMap>
-//	<CertificateVerifier>.verify() <DynamicMap>
+//	<PubKeysVerifier>.verify() <Response>
+//	<KeylessVerifier>.verify() <Response>
+//	<KeylessPrefixVerifier>.verify() <Response>
+//	<GitHubActionVerifier>.verify() <Response>
+//	<CertificateVerifier>.verify() <Response>
 //
 // Examples:
 //
-//	kw.sigstore.image('image:latest').pubKey('pubkey').verify().isTrusted // returns whether the signature of the 'image:latest' image using the public key 'pubkey' is trusted
-//	kw.sigstore.image('image:latest').keyless('issuer', 'subject').verify().digest // returns the digest of the 'image:latest' image using keyless signing with the keyless info 'issuer'='subject'
-//	kw.sigstore.image('image:latest').keylessPrefix('issuer', 'https://example.com/').verify().isTrusted // returns whether the signature of the 'image:latest' image using keyless signing with the keyless prefix info 'issuer'='https://example.com/' is trusted
-//	kw.sigstore.image('image:latest').githubAction('owner', 'repo').verify().digest // returns the digest of the 'image:latest' image using keyless signatures made via Github Actions with the owner 'owner' and the repo 'repo'
-//	kw.sigstore.image('image:latest').certificate('certificate').certificateChain('certificate1').verify().isTrusted // returns whether the signature of the 'image:latest' image using the provided certificate is trusted
+//	kw.sigstore.image('image:latest').pubKey('pubkey').verify().isTrusted() // returns whether the signature of the 'image:latest' image using the public key 'pubkey' is trusted
+//	kw.sigstore.image('image:latest').keyless('issuer', 'subject').verify().digest() // returns the digest of the 'image:latest' image using keyless signing with the keyless info 'issuer'='subject'
+//	kw.sigstore.image('image:latest').keylessPrefix('issuer', 'https://example.com/').verify().isTrusted() // returns whether the signature of the 'image:latest' image using keyless signing with the keyless prefix info 'issuer'='https://example.com/' is trusted
+//	kw.sigstore.image('image:latest').github('owner', 'repo').verify().digest() // returns the digest of the 'image:latest' image using keyless signatures made via Github Actions with the owner 'owner' and the repo 'repo'
+//	kw.sigstore.image('image:latest').certificate('certificate').certificateChain('certificate1').verify().isTrusted() // returns whether the signature of the 'image:latest' image using the provided certificate is trusted
 func Sigstore() cel.EnvOption {
 	return cel.Lib(&sigstoreLib{})
 }
@@ -230,28 +230,42 @@ func (*sigstoreLib) CompileOptions() []cel.EnvOption {
 		cel.Function("verify",
 			cel.MemberOverload("kw_sigstore_pub_keys_verifier_verify",
 				[]*cel.Type{sigstorePubKeysVerifierType},
-				types.DynType,
+				sigstoreResponseType,
 				cel.UnaryBinding(sigstorePubKeysVerifierVerify),
 			),
 			cel.MemberOverload("kw_sigstore_keyless_verifier_verify",
 				[]*cel.Type{sigstoreKeylessVerifierType},
-				types.DynType,
+				sigstoreResponseType,
 				cel.UnaryBinding(sigstoreKeylessVerifierVerify),
 			),
 			cel.MemberOverload("kw_sigstore_keyless_prefix_verifier_verify",
 				[]*cel.Type{sigstoreKeylessPrefixVerifierType},
-				types.DynType,
+				sigstoreResponseType,
 				cel.UnaryBinding(sigstoreKeylessPrefixVerifierVerify),
 			),
 			cel.MemberOverload("kw_sigstore_github_verifier_verify",
 				[]*cel.Type{sigstoreGitHubActionVerifierType},
-				types.DynType,
+				sigstoreResponseType,
 				cel.UnaryBinding(sigstoreKeylessGitHubActionsVerifierVerify),
 			),
 			cel.MemberOverload("kw_sigstore_certificate_verifier_verify",
 				[]*cel.Type{sigstoreCertificateVerifierType},
-				types.DynType,
+				sigstoreResponseType,
 				cel.UnaryBinding(sigstoreCertificateVerifierVerify),
+			),
+		),
+		cel.Function("isTrusted",
+			cel.MemberOverload("kw_sigstore_response_is_trusted",
+				[]*cel.Type{sigstoreResponseType},
+				sigstoreResponseType,
+				cel.UnaryBinding(sigstoreResponseIsTrusted),
+			),
+		),
+		cel.Function("digest",
+			cel.MemberOverload("kw_sigstore_response_digest",
+				[]*cel.Type{sigstoreResponseType},
+				sigstoreResponseType,
+				cel.UnaryBinding(sigstoreResponseDigest),
 			),
 		),
 	}
@@ -588,6 +602,24 @@ func sigstoreCertificateVerifierVerify(arg ref.Val) ref.Val {
 	return verifier.verify()
 }
 
+func sigstoreResponseIsTrusted(arg ref.Val) ref.Val {
+	response, ok := arg.(sigstoreResponse)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg)
+	}
+
+	return types.Bool(response.isTrusted)
+}
+
+func sigstoreResponseDigest(arg ref.Val) ref.Val {
+	response, ok := arg.(sigstoreResponse)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg)
+	}
+
+	return types.String(response.digest)
+}
+
 var sigstoreVerifierBuilderType = cel.ObjectType("kw.sigstore.VerifierBuilder")
 
 // sigstoreVerifierBuilder is an intermediate object is used to build a specific verifier
@@ -613,10 +645,11 @@ func (v *sigstorePubKeysVerifier) verify() ref.Val {
 		return types.NewErr("failed to verify image: %s", err)
 	}
 
-	return types.NewDynamicMap(types.DefaultTypeAdapter, map[string]any{
-		"isTrusted": response.IsTrusted,
-		"digest":    response.Digest,
-	})
+	return sigstoreResponse{
+		receiverOnlyObjectVal: receiverOnlyVal(sigstoreResponseType),
+		isTrusted:             response.IsTrusted,
+		digest:                response.Digest,
+	}
 }
 
 var sigstoreKeylessVerifierType = cel.ObjectType("kw.sigstore.KeylessVerifier")
@@ -635,10 +668,11 @@ func (v *sigstoreKeylessVerifier) verify() ref.Val {
 		return types.NewErr("failed to verify image: %s", err)
 	}
 
-	return types.NewDynamicMap(types.DefaultTypeAdapter, map[string]any{
-		"isTrusted": response.IsTrusted,
-		"digest":    response.Digest,
-	})
+	return sigstoreResponse{
+		receiverOnlyObjectVal: receiverOnlyVal(sigstoreResponseType),
+		isTrusted:             response.IsTrusted,
+		digest:                response.Digest,
+	}
 }
 
 var sigstoreKeylessPrefixVerifierType = cel.ObjectType("kw.sigstore.KeylessPrefixVerifier")
@@ -657,10 +691,11 @@ func (v *sigstoreKeylessPrefixVerifier) verify() ref.Val {
 		return types.NewErr("failed to verify image: %s", err)
 	}
 
-	return types.NewDynamicMap(types.DefaultTypeAdapter, map[string]any{
-		"isTrusted": response.IsTrusted,
-		"digest":    response.Digest,
-	})
+	return sigstoreResponse{
+		receiverOnlyObjectVal: receiverOnlyVal(sigstoreResponseType),
+		isTrusted:             response.IsTrusted,
+		digest:                response.Digest,
+	}
 }
 
 var sigstoreGitHubActionVerifierType = cel.ObjectType("kw.sigstore.GitHubActionVerifier")
@@ -680,10 +715,11 @@ func (v *sigstoreGitHubActionVerifier) verify() ref.Val {
 		return types.NewErr("failed to verify image: %s", err)
 	}
 
-	return types.NewDynamicMap(types.DefaultTypeAdapter, map[string]any{
-		"isTrusted": response.IsTrusted,
-		"digest":    response.Digest,
-	})
+	return sigstoreResponse{
+		receiverOnlyObjectVal: receiverOnlyVal(sigstoreResponseType),
+		isTrusted:             response.IsTrusted,
+		digest:                response.Digest,
+	}
 }
 
 var sigstoreCertificateVerifierType = cel.ObjectType("kw.sigstore.CertificateVerifier")
@@ -704,8 +740,18 @@ func (v *sigstoreCertificateVerifier) verify() ref.Val {
 		return types.NewErr("failed to verify image: %s", err)
 	}
 
-	return types.NewDynamicMap(types.DefaultTypeAdapter, map[string]any{
-		"isTrusted": response.IsTrusted,
-		"digest":    response.Digest,
-	})
+	return sigstoreResponse{
+		receiverOnlyObjectVal: receiverOnlyVal(sigstoreResponseType),
+		isTrusted:             response.IsTrusted,
+		digest:                response.Digest,
+	}
+}
+
+var sigstoreResponseType = cel.ObjectType("kw.sigstore.Response")
+
+// sigstoreResponse is the response object returned by the verify function
+type sigstoreResponse struct {
+	receiverOnlyObjectVal
+	isTrusted bool
+	digest    string
 }

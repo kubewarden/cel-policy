@@ -24,7 +24,7 @@ func TestCrypto(t *testing.T) {
 	}{
 		{
 			"verify",
-			"kw.crypto.certificate('cert.pem').certificateChain('chain1.pem').certificateChain('chain2.pem').notAfter(timestamp('2000-01-01T00:00:00Z')).verify()",
+			"kw.crypto.certificate('cert.pem').certificateChain('chain1.pem').certificateChain('chain2.pem').notAfter(timestamp('2000-01-01T00:00:00Z')).verify().isTrusted()",
 			"v1/is_certificate_trusted",
 			cryptoCap.CertificateVerificationRequest{
 				Cert: cryptoCap.Certificate{
@@ -47,10 +47,7 @@ func TestCrypto(t *testing.T) {
 				Trusted: true,
 				Reason:  "",
 			},
-			map[string]interface{}{
-				"isTrusted": true,
-				"reason":    "",
-			},
+			true,
 		},
 	}
 	for _, test := range tests {

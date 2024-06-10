@@ -48,15 +48,15 @@ import (
 // verify
 //
 // Verifies the trust of the certificate.
-// Returns a map with the trust result.
-// `isTrusted` is a boolean that indicates if the certificate is trusted.
-// `reason` is a string that contains the reason why the certificate is not trusted (empty if the certificate is trusted).
+// Returns a Response type that contains the trust result.
+// `isTrusted()` returns a boolean that indicates if the certificate is trusted.
+// `reason()` returns a string that contains the reason why the certificate is not trusted (empty if the certificate is trusted).
 //
-//	<CryptoVerifier>.verify() <DynamicMap>
+//	<CryptoVerifier>.verify() <Response>
 //
 // Examples:
 //
-//	kw.crypto.certificate('PEM CERTIFICATE').certificateChain('PEM CERTIFICATE').notAfter(timestamp('2000-01-01T00:00:00Z')).verify() // returns a map with the trust result
+//	kw.crypto.certificate('PEM CERTIFICATE').certificateChain('PEM CERTIFICATE').notAfter(timestamp('2000-01-01T00:00:00Z')).verify().isTrusted() // returns true if the certificate is trusted
 func Crypto() cel.EnvOption {
 	return cel.Lib(cryptoLib{})
 }
@@ -93,11 +93,29 @@ func (cryptoLib) CompileOptions() []cel.EnvOption {
 		cel.Function("verify",
 			cel.MemberOverload("kw_crypto_verifier_verify",
 				[]*cel.Type{cryptoVerifierType},
-				cel.DynType,
+				cryptoResponseType,
 				cel.UnaryBinding(cryptoVerifierVerify),
 			),
 		),
+		cel.Function("isTrusted",
+			cel.MemberOverload("kw_crypto_response_is_trusted",
+				[]*cel.Type{cryptoResponseType},
+				cryptoResponseType,
+				cel.UnaryBinding(cryptoResponseIsTrusted),
+			),
+		),
+		cel.Function("reason",
+			cel.MemberOverload("kw_crypto_response_reason",
+				[]*cel.Type{cryptoResponseType},
+				cryptoResponseType,
+				cel.UnaryBinding(cryptoResponseReason),
+			),
+		),
 	}
+}
+
+func (cryptoLib) ProgramOptions() []cel.ProgramOption {
+	return []cel.ProgramOption{}
 }
 
 func cryptoCertificate(arg ref.Val) ref.Val {
@@ -157,14 +175,31 @@ func cryptoVerifierVerify(arg ref.Val) ref.Val {
 		return types.NewErr(err.Error())
 	}
 
-	return types.NewDynamicMap(types.DefaultTypeAdapter, map[string]interface{}{
-		"isTrusted": response.Trusted,
-		"reason":    response.Reason,
-	})
+	return cryptoResponse{
+		receiverOnlyObjectVal: receiverOnlyVal(cryptoResponseType),
+		isTrusted:             response.Trusted,
+		reason:                response.Reason,
+	}
 }
 
-func (cryptoLib) ProgramOptions() []cel.ProgramOption {
-	return []cel.ProgramOption{}
+func cryptoResponseIsTrusted(arg ref.Val) ref.Val {
+	response, ok := arg.(cryptoResponse)
+
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg)
+	}
+
+	return types.Bool(response.isTrusted)
+}
+
+func cryptoResponseReason(arg ref.Val) ref.Val {
+	response, ok := arg.(cryptoResponse)
+
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg)
+	}
+
+	return types.String(response.reason)
 }
 
 var cryptoVerifierType = cel.ObjectType("kw.crypto.Verifier")
@@ -174,4 +209,13 @@ type cryptoVerifier struct {
 	certifcate      cryptoCap.Certificate
 	certifcateChain []cryptoCap.Certificate
 	notAfter        *time.Time
+}
+
+var cryptoResponseType = cel.ObjectType("kw.crypto.Response")
+
+// cryptoResponse is the response object returned by the verify function
+type cryptoResponse struct {
+	receiverOnlyObjectVal
+	isTrusted bool
+	reason    string
 }
