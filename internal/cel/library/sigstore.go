@@ -68,17 +68,17 @@ import (
 //
 //	kw.sigstore.image('image:latest').keylessPrefix('issuer1', 'https://example.com/').keylessPrefix('issuer2', 'https://example.org/') // returns a verifier that verifies the signature of the 'image:latest' image using keyless signing with the keyless prefix info 'issuer1'='https://example.com/' and 'issuer2'='https://example.org/'
 //
-// github
+// githubAction
 //
 // Builds a verifier that verifies sigstore signatures of an image using keyless signatures made via Github Actions.
 // The first argument is the owner and the second argument is the repo (optional).
 //
-//	<VerifierBuilder>.github(<string>, <string>) <GitHubVerifier>
-//	<VerifierBuilder>.github(<string>) <GitHubVerifier>
+//	<VerifierBuilder>.githubAction(<string>, <string>) <GitHubActionVerifier>
+//	<VerifierBuilder>.githubAction(<string>) <GitHubActionVerifier>
 //
 // Examples:
 //
-//	kw.sigstore.image('image:latest').github('owner1', 'repo1') // returns a verifier that verifies sigstore signatures of the 'image:latest' image using keyless signatures made via Github Actions with the owner 'owner1' and the repo 'repo1'
+//	kw.sigstore.image('image:latest').githubAction('owner1', 'repo1') // returns a verifier that verifies sigstore signatures of the 'image:latest' image using keyless signatures made via Github Actions with the owner 'owner1' and the repo 'repo1'
 //
 // certificate
 //
@@ -122,7 +122,7 @@ import (
 //	<PubKeysVerifier>.verify() <DynamicMap>
 //	<KeylessVerifier>.verify() <DynamicMap>
 //	<KeylessPrefixVerifier>.verify() <DynamicMap>
-//	<GitHubVerifier>.verify() <DynamicMap>
+//	<GitHubActionVerifier>.verify() <DynamicMap>
 //	<CertificateVerifier>.verify() <DynamicMap>
 //
 // Examples:
@@ -130,7 +130,7 @@ import (
 //	kw.sigstore.image('image:latest').pubKey('pubkey').verify().isTrusted // returns whether the signature of the 'image:latest' image using the public key 'pubkey' is trusted
 //	kw.sigstore.image('image:latest').keyless('issuer', 'subject').verify().digest // returns the digest of the 'image:latest' image using keyless signing with the keyless info 'issuer'='subject'
 //	kw.sigstore.image('image:latest').keylessPrefix('issuer', 'https://example.com/').verify().isTrusted // returns whether the signature of the 'image:latest' image using keyless signing with the keyless prefix info 'issuer'='https://example.com/' is trusted
-//	kw.sigstore.image('image:latest').github('owner', 'repo').verify().digest // returns the digest of the 'image:latest' image using keyless signatures made via Github Actions with the owner 'owner' and the repo 'repo'
+//	kw.sigstore.image('image:latest').githubAction('owner', 'repo').verify().digest // returns the digest of the 'image:latest' image using keyless signatures made via Github Actions with the owner 'owner' and the repo 'repo'
 //	kw.sigstore.image('image:latest').certificate('certificate').certificateChain('certificate1').verify().isTrusted // returns whether the signature of the 'image:latest' image using the provided certificate is trusted
 func Sigstore() cel.EnvOption {
 	return cel.Lib(&sigstoreLib{})
@@ -194,16 +194,16 @@ func (*sigstoreLib) CompileOptions() []cel.EnvOption {
 				cel.FunctionBinding(sigstoreKeylessPrefixVerifierKeylessPrefix),
 			),
 		),
-		cel.Function("github",
-			cel.MemberOverload("kw_sigstore_verifier_builder_github_owner",
+		cel.Function("githubAction",
+			cel.MemberOverload("kw_sigstore_verifier_builder_github_action_owner",
 				[]*cel.Type{sigstoreVerifierBuilderType, cel.StringType},
-				sigstoreGitHubVerifierType,
-				cel.BinaryBinding(sigstoreVerifierBuilderGitHubOwner),
+				sigstoreGitHubActionVerifierType,
+				cel.BinaryBinding(sigstoreVerifierBuilderGitHubActionOwner),
 			),
-			cel.MemberOverload("kw_sigstore_verifier_builder_github_owner_repo",
+			cel.MemberOverload("kw_sigstore_verifier_builder_github_action_owner_repo",
 				[]*cel.Type{sigstoreVerifierBuilderType, cel.StringType, cel.StringType},
-				sigstoreGitHubVerifierType,
-				cel.FunctionBinding(sigstoreVerifierBuilderGitHubOwnerRepo),
+				sigstoreGitHubActionVerifierType,
+				cel.FunctionBinding(sigstoreVerifierBuilderGitHubActionOwnerRepo),
 			),
 		),
 		cel.Function("certificate",
@@ -244,7 +244,7 @@ func (*sigstoreLib) CompileOptions() []cel.EnvOption {
 				cel.UnaryBinding(sigstoreKeylessPrefixVerifierVerify),
 			),
 			cel.MemberOverload("kw_sigstore_github_verifier_verify",
-				[]*cel.Type{sigstoreGitHubVerifierType},
+				[]*cel.Type{sigstoreGitHubActionVerifierType},
 				types.DynType,
 				cel.UnaryBinding(sigstoreKeylessGitHubActionsVerifierVerify),
 			),
@@ -471,7 +471,7 @@ func sigstoreKeylessPrefixVerifierVerify(arg ref.Val) ref.Val {
 	return verifier.verify()
 }
 
-func sigstoreVerifierBuilderGitHubOwner(arg1, arg2 ref.Val) ref.Val {
+func sigstoreVerifierBuilderGitHubActionOwner(arg1, arg2 ref.Val) ref.Val {
 	builder, ok := arg1.(sigstoreVerifierBuilder)
 	if !ok {
 		return types.MaybeNoSuchOverloadErr(arg1)
@@ -482,15 +482,15 @@ func sigstoreVerifierBuilderGitHubOwner(arg1, arg2 ref.Val) ref.Val {
 		return types.MaybeNoSuchOverloadErr(arg2)
 	}
 
-	return sigstoreGitHubVerifier{
-		receiverOnlyObjectVal: receiverOnlyVal(sigstoreGitHubVerifierType),
+	return sigstoreGitHubActionVerifier{
+		receiverOnlyObjectVal: receiverOnlyVal(sigstoreGitHubActionVerifierType),
 		image:                 builder.image,
 		annotations:           builder.annotations,
 		owner:                 owner,
 	}
 }
 
-func sigstoreVerifierBuilderGitHubOwnerRepo(args ...ref.Val) ref.Val {
+func sigstoreVerifierBuilderGitHubActionOwnerRepo(args ...ref.Val) ref.Val {
 	if len(args) != 3 {
 		return types.NoSuchOverloadErr()
 	}
@@ -510,8 +510,8 @@ func sigstoreVerifierBuilderGitHubOwnerRepo(args ...ref.Val) ref.Val {
 		return types.MaybeNoSuchOverloadErr(args[2])
 	}
 
-	return sigstoreGitHubVerifier{
-		receiverOnlyObjectVal: receiverOnlyVal(sigstoreGitHubVerifierType),
+	return sigstoreGitHubActionVerifier{
+		receiverOnlyObjectVal: receiverOnlyVal(sigstoreGitHubActionVerifierType),
 		image:                 builder.image,
 		annotations:           builder.annotations,
 		owner:                 owner,
@@ -520,7 +520,7 @@ func sigstoreVerifierBuilderGitHubOwnerRepo(args ...ref.Val) ref.Val {
 }
 
 func sigstoreKeylessGitHubActionsVerifierVerify(arg ref.Val) ref.Val {
-	verifier, ok := arg.(sigstoreGitHubVerifier)
+	verifier, ok := arg.(sigstoreGitHubActionVerifier)
 	if !ok {
 		return types.MaybeNoSuchOverloadErr(arg)
 	}
@@ -663,10 +663,10 @@ func (v *sigstoreKeylessPrefixVerifier) verify() ref.Val {
 	})
 }
 
-var sigstoreGitHubVerifierType = cel.ObjectType("kw.sigstore.GitHubVerifier")
+var sigstoreGitHubActionVerifierType = cel.ObjectType("kw.sigstore.GitHubActionVerifier")
 
-// sigstoreGitHubVerifier verifies sigstore signatures of an image using keyless signatures made via Github Actions
-type sigstoreGitHubVerifier struct {
+// sigstoreGitHubActionVerifier verifies sigstore signatures of an image using keyless signatures made via Github Actions
+type sigstoreGitHubActionVerifier struct {
 	receiverOnlyObjectVal
 	image       string
 	annotations map[string]string
@@ -674,7 +674,7 @@ type sigstoreGitHubVerifier struct {
 	repo        string
 }
 
-func (v *sigstoreGitHubVerifier) verify() ref.Val {
+func (v *sigstoreGitHubActionVerifier) verify() ref.Val {
 	response, err := verify.VerifyKeylessGithubActions(&host, v.image, v.owner, v.repo, v.annotations)
 	if err != nil {
 		return types.NewErr("failed to verify image: %s", err)
