@@ -74,8 +74,8 @@ func TestSigstore(t *testing.T) {
 			true,
 		},
 		{
-			"github verifier (owner and repo)",
-			"kw.sigstore.image('image:latest').annotation('foo', 'bar').github('kubewarden', 'policy-server').verify().digest",
+			"github action verifier (owner and repo)",
+			"kw.sigstore.image('image:latest').annotation('foo', 'bar').githubAction('kubewarden', 'policy-server').verify().digest",
 			"v2/verify",
 			verify.SigstoreGithubActionsVerify{
 				Image: "image:latest",
@@ -92,8 +92,8 @@ func TestSigstore(t *testing.T) {
 			"sha256:1234",
 		},
 		{
-			"github verifier (owner)",
-			"kw.sigstore.image('image:latest').annotation('foo', 'bar').github('kubewarden').verify().digest",
+			"github action verifier (owner)",
+			"kw.sigstore.image('image:latest').annotation('foo', 'bar').githubAction('kubewarden').verify().digest",
 			"v2/verify",
 			verify.SigstoreGithubActionsVerify{
 				Image: "image:latest",
