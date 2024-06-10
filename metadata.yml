@@ -8,14 +8,21 @@ contextAwareResources:
   - apiVersion: v1
     kind: Namespace
 executionMode: wasi
+# Consider the policy for the background audit scans. Default is true. Note the
+# intrinsic limitations of the background audit feature on docs.kubewarden.io;
+# If your policy hits any limitations, set to false for the audit feature to
+# skip this policy and not generate false positives.
+backgroundAudit: true
 annotations:
   io.kubewarden.policy.title: cel-policy
   io.artifacthub.displayName: CEL Policy
   io.artifacthub.resources: Any
-  io.artifacthub.keywords: compliance
+  io.artifacthub.keywords: compliance, CEL, ValidatingAdmissionPolicy, Common Expression Language
   io.kubewarden.policy.description: A policy that evaluates CEL expressions
   io.kubewarden.policy.author: "Kubewarden developers <cncf-kubewarden-maintainers@lists.cncf.io>"
   io.kubewarden.policy.ociUrl: ghcr.io/kubewarden/policies/cel-policy
   io.kubewarden.policy.url: https://github.com/kubewarden/cel-policy
   io.kubewarden.policy.source: https://github.com/kubewarden/cel-policy
   io.kubewarden.policy.license: Apache-2.0
+  # io.kubewarden.policy.category: CEL metapolicy
+  # io.kubewarden.policy.severity: medium # one of info, low, medium, high, critical. See docs.
