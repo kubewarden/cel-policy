@@ -26,7 +26,7 @@ func TestSigstore(t *testing.T) {
 	}{
 		{
 			"pubKey verifier",
-			"kw.sigstore.image('image:latest').annotation('foo', 'bar').pubKey('key').pubKey('otherKey').verify().isTrusted",
+			"kw.sigstore.image('image:latest').annotation('foo', 'bar').pubKey('key').pubKey('otherKey').verify().isTrusted()",
 			"v2/verify",
 			verify.SigstorePubKeysVerify{
 				Image:       "image:latest",
@@ -41,7 +41,7 @@ func TestSigstore(t *testing.T) {
 		},
 		{
 			"kelyess verifier",
-			"kw.sigstore.image('image:latest').annotation('foo', 'bar').keyless('issuer', 'subject').keyless('otherIssuer', 'otherSubject').verify().digest",
+			"kw.sigstore.image('image:latest').annotation('foo', 'bar').keyless('issuer', 'subject').keyless('otherIssuer', 'otherSubject').verify().digest()",
 			"v2/verify",
 			verify.SigstoreKeylessVerifyExact{
 				Image:   "image:latest",
@@ -58,7 +58,7 @@ func TestSigstore(t *testing.T) {
 		},
 		{
 			"keylessPrefix verifier",
-			"kw.sigstore.image('image:latest').annotation('foo', 'bar').keylessPrefix('issuer', 'subject').keylessPrefix('otherIssuer', 'otherSubject').verify().isTrusted",
+			"kw.sigstore.image('image:latest').annotation('foo', 'bar').keylessPrefix('issuer', 'subject').keylessPrefix('otherIssuer', 'otherSubject').verify().isTrusted()",
 			"v2/verify",
 			verify.SigstoreKeylessPrefixVerify{
 				Image:         "image:latest",
@@ -75,7 +75,7 @@ func TestSigstore(t *testing.T) {
 		},
 		{
 			"github action verifier (owner and repo)",
-			"kw.sigstore.image('image:latest').annotation('foo', 'bar').githubAction('kubewarden', 'policy-server').verify().digest",
+			"kw.sigstore.image('image:latest').annotation('foo', 'bar').githubAction('kubewarden', 'policy-server').verify().digest()",
 			"v2/verify",
 			verify.SigstoreGithubActionsVerify{
 				Image: "image:latest",
@@ -93,7 +93,7 @@ func TestSigstore(t *testing.T) {
 		},
 		{
 			"github action verifier (owner)",
-			"kw.sigstore.image('image:latest').annotation('foo', 'bar').githubAction('kubewarden').verify().digest",
+			"kw.sigstore.image('image:latest').annotation('foo', 'bar').githubAction('kubewarden').verify().digest()",
 			"v2/verify",
 			verify.SigstoreGithubActionsVerify{
 				Image: "image:latest",
@@ -110,7 +110,7 @@ func TestSigstore(t *testing.T) {
 		},
 		{
 			"certificate verifier",
-			"kw.sigstore.image('image:latest').annotation('foo', 'bar').certificate('cert').certificateChain('chain1').certificateChain('chain2').requireRekorBundle(true).verify().isTrusted",
+			"kw.sigstore.image('image:latest').annotation('foo', 'bar').certificate('cert').certificateChain('chain1').certificateChain('chain2').requireRekorBundle(true).verify().isTrusted()",
 			"v2/verify",
 			verify.SigstoreCertificateVerify{
 				Image:       "image:latest",
