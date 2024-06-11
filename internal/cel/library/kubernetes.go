@@ -21,8 +21,8 @@ import (
 //
 // Examples:
 //
-//	kw.k8s.apiversion('v1') // returns an ClientBuilder for the core group
-//	kw.k8s.path('apps/v1') // returns an ClientBuilder for the 'apps' group
+//	kw.k8s.apiVersion('v1') // returns an ClientBuilder for the core group
+//	kw.k8s.apiVersion('apps/v1') // returns an ClientBuilder for the 'apps' group
 //
 // kind
 //
