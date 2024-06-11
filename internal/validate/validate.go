@@ -10,12 +10,8 @@ import (
 	"github.com/kubewarden/cel-policy/internal/cel"
 	"github.com/kubewarden/cel-policy/internal/settings"
 	kubewarden "github.com/kubewarden/policy-sdk-go"
-	"github.com/kubewarden/policy-sdk-go/pkg/capabilities"
-	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/kubernetes"
 	kubewardenProtocol "github.com/kubewarden/policy-sdk-go/protocol"
 )
-
-var host = capabilities.NewHost()
 
 func Validate(payload []byte) ([]byte, error) {
 	validationRequest := kubewardenProtocol.ValidationRequest{}
@@ -53,9 +49,7 @@ func Validate(payload []byte) ([]byte, error) {
 		}
 	}
 
-	// TODO: change this to corev1.Namespace once nested structs are supported
-	// See: https://github.com/google/cel-go/pull/892
-	var namespaceObject map[string]interface{}
+	var namespace namespaceObject
 
 	objectMeta, ok := object["metadata"].(map[string]interface{})
 	if !ok {
@@ -63,17 +57,8 @@ func Validate(payload []byte) ([]byte, error) {
 	}
 
 	if objectNamespace, ok := objectMeta["namespace"].(string); ok && objectNamespace != "" {
-		resourceRequest := kubernetes.GetResourceRequest{
-			APIVersion: "v1",
-			Kind:       "Namespace",
-			Name:       objectNamespace,
-		}
-
-		responseBytes, err := kubernetes.GetResource(&host, resourceRequest)
-		if err != nil {
-			log.Printf("Warning: cannot get namespace data: %s. `namespaceObject` cannot be populated.", err)
-		} else if err := json.Unmarshal(responseBytes, &namespaceObject); err != nil {
-			return nil, fmt.Errorf("cannot parse namespace data: %w", err)
+		namespace = namespaceObject{
+			objectNamespace,
 		}
 	}
 
@@ -81,7 +66,7 @@ func Validate(payload []byte) ([]byte, error) {
 		"object":          object,
 		"oldObject":       oldObject,
 		"request":         validationRequest.Request,
-		"namespaceObject": namespaceObject,
+		"namespaceObject": namespace,
 	}
 
 	if err := evalVariables(compiler, vars, settings.Variables); err != nil {
