@@ -26,7 +26,7 @@ func TestValidate(t *testing.T) {
 			settings: settings.Settings{
 				Validations: []settings.Validation{
 					{
-						Expression: `object.metadata.name != "pod-name"`,
+						Expression: "object.metadata.name != 'pod-name'",
 						Message:    "not true",
 					},
 				},
@@ -48,8 +48,8 @@ func TestValidate(t *testing.T) {
 			settings: settings.Settings{
 				Validations: []settings.Validation{
 					{
-						Expression:        `object.metadata.name != "namespace-name"`,
-						MessageExpression: `object.metadata.name + " is not allowed"`,
+						Expression:        "object.metadata.name != 'namespace-name'",
+						MessageExpression: "object.metadata.name + ' is not allowed'",
 					},
 				},
 			},
@@ -69,7 +69,7 @@ func TestValidate(t *testing.T) {
 			settings: settings.Settings{
 				Validations: []settings.Validation{
 					{
-						Expression: `object.metadata.name != "pod-name"`,
+						Expression: "object.metadata.name != 'pod-name'",
 					},
 				},
 			},
@@ -81,7 +81,7 @@ func TestValidate(t *testing.T) {
 			},
 			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
 				Accepted: false,
-				Message:  message(`failed expression: object.metadata.name != "pod-name"`),
+				Message:  message("failed expression: object.metadata.name != 'pod-name'"),
 				Code:     code(400),
 			},
 		},
@@ -90,7 +90,7 @@ func TestValidate(t *testing.T) {
 			settings: settings.Settings{
 				Validations: []settings.Validation{
 					{
-						Expression: `object.metadata.name != "pod-name"`,
+						Expression: "object.metadata.name != 'pod-name'",
 						Reason:     settings.StatusReasonUnauthorized,
 						Message:    "failed",
 					},
@@ -113,7 +113,7 @@ func TestValidate(t *testing.T) {
 			settings: settings.Settings{
 				Validations: []settings.Validation{
 					{
-						Expression: `object.metadata.name != "pod-name"`,
+						Expression: "object.metadata.name != 'pod-name'",
 						Message:    "failed",
 						Reason:     settings.StatusReasonUnauthorized,
 					},
@@ -137,7 +137,7 @@ func TestValidate(t *testing.T) {
 				Variables: []settings.Variable{
 					{
 						Name:       "forbiddenName",
-						Expression: `"pod-name"`,
+						Expression: "'pod-name'",
 					},
 					{
 						Name:       "podMeta",
@@ -151,7 +151,7 @@ func TestValidate(t *testing.T) {
 				Validations: []settings.Validation{
 					{
 						Expression:        "variables.podName != variables.forbiddenName",
-						MessageExpression: `variables.forbiddenName + " is forbidden"`,
+						MessageExpression: "variables.forbiddenName + ' is forbidden'",
 					},
 				},
 			},
