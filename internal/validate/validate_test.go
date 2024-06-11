@@ -33,7 +33,8 @@ func TestValidate(t *testing.T) {
 			},
 			object: &corev1.Pod{
 				Metadata: &metav1.ObjectMeta{
-					Name: "pod-name",
+					Name:      "pod-name",
+					Namespace: "default",
 				},
 			},
 			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
@@ -166,6 +167,25 @@ func TestValidate(t *testing.T) {
 				Code:     code(400),
 			},
 		},
+		{
+			name: "namespaceObject lazy loading",
+			settings: settings.Settings{
+				Validations: []settings.Validation{
+					{
+						Expression: "namespaceObject.metadata.labels.foo == 'bar'",
+					},
+				},
+			},
+			object: &corev1.Pod{
+				Metadata: &metav1.ObjectMeta{
+					Name:      "pod-name",
+					Namespace: "default",
+				},
+			},
+			expectedValidationResponse: kubewardenProtocol.ValidationResponse{
+				Accepted: true,
+			},
+		},
 	}
 
 	// Override the host capabilities client with a mock client
@@ -179,6 +199,9 @@ func TestValidate(t *testing.T) {
 	response, err := json.Marshal(&corev1.Namespace{
 		Metadata: &metav1.ObjectMeta{
 			Name: "default",
+			Labels: map[string]string{
+				"foo": "bar",
+			},
 		},
 	})
 	require.NoError(t, err)
