@@ -70,15 +70,17 @@ import (
 // list
 //
 // Returns a list of Kubernetes resources matching the client configuration.
+// The list of resources is returned as the corresponding object list type, for instance listing of `Pods` will return a [`PodList`](https://pkg.go.dev/k8s.io/api/core/v1#PodList).
+// The resources can be accessed using the 'items' field.
 //
 //	<Client>.list() <objectList>
 //
 // Examples:
 //
-//	kw.k8s.apiVersion('v1').kind('Pod').namespace('default').list() // returns a list of 'Pod' resources in the 'default' namespace
-//	kw.k8s.apiVersion('v1').kind('Pod').list() // returns a list of 'Pod' resources in all namespaces
-//	kw.k8s.apiVersion('v1').kind('Pod').labelSelector('app=nginx').list() // returns a list of 'Pod' resources in all namespaces with the label selector 'app=nginx'
-//	kw.k8s.apiVersion('v1').kind('Pod').fieldSelector('status.phase=Running').namespace('default').list() // returns a list of running 'Pod' resources in the default namespace with the field selector 'status.phase=Running'
+//	kw.k8s.apiVersion('v1').kind('Pod').namespace('default').list().items // returns a list of 'Pod' resources in the 'default' namespace
+//	kw.k8s.apiVersion('v1').kind('Pod').list().items // returns a list of 'Pod' resources in all namespaces
+//	kw.k8s.apiVersion('v1').kind('Pod').labelSelector('app=nginx').list().items // returns a list of 'Pod' resources in all namespaces with the label selector 'app=nginx'
+//	kw.k8s.apiVersion('v1').kind('Pod').fieldSelector('status.phase=Running').namespace('default').list().items // returns a list of running 'Pod' resources in the default namespace with the field selector 'status.phase=Running'
 //
 // get
 //
