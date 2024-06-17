@@ -1,66 +1,37 @@
-categories:
-  - title: "⚠️  Breaking changes"
-    labels:
-      - "kind/major"
-      - "kind/breaking-change"
-  - title: "🚀 Features"
-    labels:
-      - "kind/enhancement"
-      - "kind/feature"
-  - title: "🐛 Bug Fixes"
-    labels:
-      - "kind/bug"
-  - title: "🧰 Maintenance"
-    labels:
-      - "kind/chore"
-      - "area/dependencies"
+name: Release Drafter
 
-exclude-labels:
-  - duplicate
-  - invalid
-  - later
-  - wontfix
-  - kind/question
-  - release/skip-changelog
+on:
+  workflow_dispatch:
+  push:
+    # branches to consider in the event; optional, defaults to all
+    branches:
+      - main
+  # pull_request event is required only for autolabeler
+  pull_request:
+    # Only following types are handled by the action, but one can default to all as well
+    types: [opened, reopened, synchronize, edited]
+  # pull_request_target event is required for autolabeler to support PRs from forks
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
 
-change-template: "- $TITLE (#$NUMBER)"
-change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
-name-template: "v$RESOLVED_VERSION"
-template: |
-  $CHANGES
+permissions:
+  contents: read
 
-autolabeler:
-  # Tag any PR with "!" in the subject as major update. In other words, breaking change
-  - label: "kind/breaking-change"
-    title: "/.*!:.*/"
-  - label: "area/dependencies"
-    title: "chore(deps)"
-  - label: "area/dependencies"
-    title: "fix(deps)"
-  - label: "area/dependencies"
-    title: "build(deps)"
-  - label: "kind/feature"
-    title: "feat"
-  - label: "kind/bug"
-    title: "fix"
-  - label: "kind/chore"
-    title: "chore"
-
-version-resolver:
-  major:
-    labels:
-      - "kind/major"
-      - "kind/breaking-change"
-  minor:
-    labels:
-      - "kind/minor"
-      - "kind/feature"
-      - "kind/enhancement"
-  patch:
-    labels:
-      - "kind/patch"
-      - "kind/fix"
-      - "kind/bug"
-      - "kind/chore"
-      - "area/dependencies"
-  default: patch
+jobs:
+  update_release_draft:
+    permissions:
+      # write permission is required to create a github release
+      contents: write
+      # write permission is required for autolabeler
+      # otherwise, read permission is required at least
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      # Drafts your next Release notes as Pull Requests are merged into "master"
+      - uses: release-drafter/release-drafter@3f0f87098bd6b5c5b9a36d49c41d998ea58f9348 # v6.0.0
+        # (Optional) specify config name to use, relative to .github/. Default: release-drafter.yml
+        # with:
+        #   config-name: my-config.yml
+        #   disable-autolabeler: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
