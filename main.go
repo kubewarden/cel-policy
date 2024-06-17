@@ -10,6 +10,11 @@ import (
 )
 
 func main() {
+	// Since we use log.Fatal* functions to write to stderr and exit with a non-zero status code,
+	// we need to disable the default log prefix that includes the date and time, as it would
+	// be bubbled up to the message of the response returned to the caller.
+	log.SetFlags(0)
+
 	if len(os.Args) != 2 {
 		log.Fatalln("Wrong usage, expected either 'validate' or 'validate-settings'")
 	}
