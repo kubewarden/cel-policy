@@ -10,6 +10,8 @@ import (
 )
 
 func main() {
+	log.SetFlags(0)
+
 	if len(os.Args) != 2 {
 		log.Fatalln("Wrong usage, expected either 'validate' or 'validate-settings'")
 	}
