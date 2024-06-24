@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Install dependencies
-        uses: kubewarden/github-actions/policy-gh-action-dependencies@v3.1.20
+        uses: kubewarden/github-actions/policy-gh-action-dependencies@v3.2.0
 
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
@@ -39,7 +39,7 @@ jobs:
           make e2e-tests
 
       - name: Release
-        uses: kubewarden/github-actions/policy-release@v3.1.20
+        uses: kubewarden/github-actions/policy-release@v3.2.0
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           oci-target: ghcr.io/${{ github.repository_owner }}/policies/cel-policy
