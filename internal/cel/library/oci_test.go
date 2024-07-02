@@ -9,6 +9,7 @@ import (
 	"github.com/google/cel-go/cel"
 
 	manifestCap "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/manifest"
+	manifestCapConfig "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/manifest_config"
 	manifestDigestCap "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/manifest_digest"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 
@@ -46,6 +47,18 @@ func TestOCI(t *testing.T) {
 				Digest: "sha256:1234",
 			},
 			"sha256:1234",
+		},
+		{
+			"manifestConfig",
+			"kw.oci.image('image:latest').manifestConfig().config.author",
+			"v1/oci_manifest_config",
+			"image:latest",
+			manifestCapConfig.OciImageManifestAndConfigResponse{
+				Manifest:    &specs.Manifest{},
+				ImageConfig: &specs.Image{Author: "author"},
+				Digest:      "sha256:1234",
+			},
+			"author",
 		},
 	}
 	for _, test := range tests {

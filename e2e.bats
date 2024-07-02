@@ -29,4 +29,3 @@
   [ $(expr "$output" : '.*Deployment: nginx, namespace: default - replicas must be no greater than 50.*') -ne 0 ]
   [ $(expr "$output" : '.*code.*401') -ne 0 ]
 }
-

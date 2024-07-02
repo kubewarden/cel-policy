@@ -50,6 +50,22 @@ import (
 // Examples:
 //
 //	kw.oci.image('image:latest').manifestDigest() // returns the digest of the image manifest
+//
+// manifestConfig
+//
+// Returns the manifest, digest and image configuration of the OCI image.
+// See more information about the fields available of manifest and image
+// configuration at:
+// https://github.com/opencontainers/image-spec/blob/main/manifest.md
+// https://github.com/opencontainers/image-spec/blob/main/config.md
+//
+//	<OCIClient>.manifestConfig() <DynamicMap>
+//
+// Examples:
+//
+//	kw.oci.image('image:latest').manifestConfig().manifest // returns the image manifest
+//	kw.oci.image('image:latest').manifestConfig().config // returns the image configuration
+//	kw.oci.image('image:latest').manifestConfig().digest // returns the image digest
 func OCI() cel.EnvOption {
 	return cel.Lib(&ociLib{})
 }
@@ -83,6 +99,13 @@ func (*ociLib) CompileOptions() []cel.EnvOption {
 				cel.UnaryBinding(ociClientManifestDigest),
 			),
 		),
+		cel.Function("manifestConfig",
+			cel.MemberOverload("kw_k8s_manifest_config",
+				[]*cel.Type{ociClientType},
+				cel.DynType,
+				cel.UnaryBinding(ociClientManifestConfig),
+			),
+		),
 	}
 }
 
@@ -109,6 +132,15 @@ func ociClientManifest(arg ref.Val) ref.Val {
 	}
 
 	return ociClient.manifest()
+}
+
+func ociClientManifestConfig(arg ref.Val) ref.Val {
+	ociClient, ok := arg.(ociClient)
+	if !ok {
+		return types.MaybeNoSuchOverloadErr(arg)
+	}
+
+	return ociClient.manifestConfig()
 }
 
 func ociClientManifestDigest(arg ref.Val) ref.Val {
@@ -157,4 +189,26 @@ func (c *ociClient) manifestDigest() ref.Val {
 	}
 
 	return types.String(digest)
+}
+
+func (c *ociClient) manifestConfig() ref.Val {
+	payload, err := json.Marshal(c.image)
+	if err != nil {
+		return types.NewErr("failed to marshal image name: %s", err)
+	}
+
+	// We are using the host.Client.HostCall method to call the host directly as the SDK call
+	// returns a struct with external types but we want to return a DynamicMap that maps to the JSON response.
+	responsePayload, err := host.Client.HostCall("kubewarden", "oci", "v1/oci_manifest_config", payload)
+	if err != nil {
+		return types.NewErr("failed to call host: %s", err)
+	}
+
+	var response map[string]interface{}
+	err = json.Unmarshal(responsePayload, &response)
+	if err != nil {
+		return types.NewErr("failed to unmarshal response payload: %s", err)
+	}
+
+	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
 }
