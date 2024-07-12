@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
 	"github.com/kubewarden/cel-policy/internal/cel"
 	"github.com/kubewarden/cel-policy/internal/settings"
 	kubewarden "github.com/kubewarden/policy-sdk-go"
@@ -83,16 +84,19 @@ func evalVariables(compiler *cel.Compiler, vars map[string]interface{}, variable
 			return err
 		}
 
-		val, err := compiler.EvalCELExpression(vars, ast)
-		if err != nil {
-			return err
-		}
-
 		if err := compiler.AddVariable(variable.Name, ast.OutputType()); err != nil {
 			return err
 		}
-		vars[fmt.Sprintf("variables.%s", variable.Name)] = val
+		vars[fmt.Sprintf("variables.%s", variable.Name)] = func() ref.Val {
+			val, err := compiler.EvalCELExpression(vars, ast)
+			if err != nil {
+				return types.WrapErr(err)
+			}
+
+			return val
+		}
 	}
+
 	return nil
 }
 
