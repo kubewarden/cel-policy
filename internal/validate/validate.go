@@ -50,24 +50,23 @@ func Validate(payload []byte) ([]byte, error) {
 		}
 	}
 
-	var namespace namespaceObject
-
 	objectMeta, ok := object["metadata"].(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("wrong object format: metadata not found in object")
 	}
 
-	if objectNamespace, ok := objectMeta["namespace"].(string); ok && objectNamespace != "" {
-		namespace = namespaceObject{
-			objectNamespace,
-		}
-	}
-
 	vars := map[string]interface{}{
-		"object":          object,
-		"oldObject":       oldObject,
-		"request":         validationRequest.Request,
-		"namespaceObject": namespace,
+		"object":    object,
+		"oldObject": oldObject,
+		"request":   validationRequest.Request,
+		"namespaceObject": func() ref.Val {
+			// lazy load namespaceObject
+			if objectNamespace, ok := objectMeta["namespace"].(string); ok && objectNamespace != "" {
+				return getNamespaceObject(objectNamespace)
+			}
+
+			return types.NullValue
+		},
 	}
 
 	if err := evalVariables(compiler, vars, settings.Variables); err != nil {
@@ -87,6 +86,7 @@ func evalVariables(compiler *cel.Compiler, vars map[string]interface{}, variable
 		if err := compiler.AddVariable(variable.Name, ast.OutputType()); err != nil {
 			return err
 		}
+		// lazy load variables
 		vars[fmt.Sprintf("variables.%s", variable.Name)] = func() ref.Val {
 			val, err := compiler.EvalCELExpression(vars, ast)
 			if err != nil {
