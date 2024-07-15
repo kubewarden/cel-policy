@@ -1,4 +1,4 @@
-//nolint:varnamelen
+//nolint:lll // This file has long lines due some examples in the comments
 package library
 
 import (
@@ -213,7 +213,7 @@ type cryptoVerifier struct {
 
 var cryptoResponseType = cel.ObjectType("kw.crypto.Response")
 
-// cryptoResponse is the response object returned by the verify function
+// cryptoResponse is the response object returned by the verify function.
 type cryptoResponse struct {
 	receiverOnlyObjectVal
 	isTrusted bool

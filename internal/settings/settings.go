@@ -1,3 +1,4 @@
+//nolint:lll,govet // This file contains long lines and splitting them would not make the code more readable. Also, we shadow the err variable in some places, but it's not a problem.
 package settings
 
 import (
@@ -20,6 +21,7 @@ const (
 	StatusReasonRequestEntityTooLarge = "RequestEntityTooLarge"
 )
 
+//nolint:gochecknoglobals // []string cannot be const
 var supportedValidationPolicyReason = []string{
 	StatusReasonUnauthorized,
 	StatusReasonForbidden,
@@ -27,7 +29,7 @@ var supportedValidationPolicyReason = []string{
 	StatusReasonRequestEntityTooLarge,
 }
 
-// Settings defines the settings of the policy
+// Settings defines the settings of the policy.
 type Settings struct {
 	Variables   []Variable   `json:"variables"`
 	Validations []Validation `json:"validations"`
@@ -177,8 +179,7 @@ func validateValidations(compiler *cel.Compiler, index int, validation Validatio
 			result = multierror.Append(result, err)
 		}
 	}
-
-	//nolint:gocritic
+	//nolint:gocritic // Rewriting this code as switch would not make it more readable
 	if len(validation.Message) > 0 && len(trimmedMsg) == 0 {
 		err := newInvalidValueError(fmt.Sprintf("validations[%d].message", index), validation.Message, "message must be non-empty if specified")
 		result = multierror.Append(result, err)

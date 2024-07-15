@@ -1,7 +1,9 @@
+//nolint:lll,govet // This file contains long lines and splitting them would not make the code more readable.Also, we shadow the err variable in some places, but it's not a problem.
 package validate
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -14,6 +16,13 @@ import (
 	kubewardenProtocol "github.com/kubewarden/policy-sdk-go/protocol"
 )
 
+const (
+	httpBadRequestStatusCode     = 400
+	httpForbiddenStatusCode      = 403
+	httpEntityTooLargeStatusCode = 413
+	httpUnauthorizedStatusCode   = 401
+)
+
 func Validate(payload []byte) ([]byte, error) {
 	validationRequest := kubewardenProtocol.ValidationRequest{}
 
@@ -21,14 +30,14 @@ func Validate(payload []byte) ([]byte, error) {
 	if err != nil {
 		return kubewarden.RejectRequest(
 			kubewarden.Message(fmt.Sprintf("Error deserializing validation request: %v", err)),
-			kubewarden.Code(400))
+			kubewarden.Code(httpBadRequestStatusCode))
 	}
 
 	settings, err := settings.NewSettingsFromValidationReq(&validationRequest)
 	if err != nil {
 		return kubewarden.RejectRequest(
 			kubewarden.Message(fmt.Sprintf("Error serializing RawMessage: %v", err)),
-			kubewarden.Code(400))
+			kubewarden.Code(httpBadRequestStatusCode))
 	}
 
 	compiler, err := cel.NewCompiler()
@@ -52,7 +61,7 @@ func Validate(payload []byte) ([]byte, error) {
 
 	objectMeta, ok := object["metadata"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("wrong object format: metadata not found in object")
+		return nil, errors.New("wrong object format: metadata not found in object")
 	}
 
 	vars := map[string]interface{}{
@@ -69,7 +78,7 @@ func Validate(payload []byte) ([]byte, error) {
 		},
 	}
 
-	if err := evalVariables(compiler, vars, settings.Variables); err != nil {
+	if err = evalVariables(compiler, vars, settings.Variables); err != nil {
 		return nil, fmt.Errorf("failed to evaluate variables: %w", err)
 	}
 
@@ -83,7 +92,7 @@ func evalVariables(compiler *cel.Compiler, vars map[string]interface{}, variable
 			return err
 		}
 
-		if err := compiler.AddVariable(variable.Name, ast.OutputType()); err != nil {
+		if err = compiler.AddVariable(variable.Name, ast.OutputType()); err != nil {
 			return err
 		}
 		// lazy load variables
@@ -146,7 +155,7 @@ func evalMessageExpression(compiler *cel.Compiler, vars map[string]interface{}, 
 
 	message, ok := val.Value().(string)
 	if !ok {
-		return "", fmt.Errorf("message expression must evaluate to string")
+		return "", errors.New("message expression must evaluate to string")
 	}
 
 	return message, nil
@@ -156,13 +165,13 @@ func reasonToStatusCode(reason string) kubewarden.Code {
 	var statusCode kubewarden.Code
 	switch reason {
 	case settings.StatusReasonInvalid:
-		statusCode = kubewarden.Code(400)
+		statusCode = kubewarden.Code(httpBadRequestStatusCode)
 	case settings.StatusReasonForbidden:
-		statusCode = 403
+		statusCode = httpForbiddenStatusCode
 	case settings.StatusReasonRequestEntityTooLarge:
-		statusCode = 413
+		statusCode = httpEntityTooLargeStatusCode
 	case settings.StatusReasonUnauthorized:
-		statusCode = 401
+		statusCode = httpUnauthorizedStatusCode
 	default:
 		// This should never happen since we validate the settings when loading the policy
 		log.Fatalf("unknown reason: %v", reason)

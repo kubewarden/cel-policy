@@ -1,4 +1,4 @@
-//nolint:varnamelen
+//nolint:lll // This file has long lines due some examples in the comments
 package library
 
 import (
@@ -308,7 +308,7 @@ func (c *k8sClient) list() ref.Val {
 	}
 
 	var response map[string]interface{}
-	if err := json.Unmarshal(responseBytes, &response); err != nil {
+	if err = json.Unmarshal(responseBytes, &response); err != nil {
 		return types.NewErr("cannot unmarshal Kubernetes list resources response: %s", err)
 	}
 
@@ -330,7 +330,7 @@ func (c *k8sClient) get(name string) ref.Val {
 	}
 
 	var response map[string]interface{}
-	if err := json.Unmarshal(responseBytes, &response); err != nil {
+	if err = json.Unmarshal(responseBytes, &response); err != nil {
 		return types.NewErr("cannot unmarshal Kubernetes get resource response: %s", err)
 	}
 

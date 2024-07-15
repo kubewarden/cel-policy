@@ -4,5 +4,5 @@ package library
 
 import "github.com/kubewarden/policy-sdk-go/pkg/capabilities"
 
-// handle to interact with the policy host
+// handle to interact with the policy host.
 var host = capabilities.NewHost()

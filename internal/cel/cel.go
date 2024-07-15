@@ -41,6 +41,7 @@ func NewCompiler() (*Compiler, error) {
 
 		// Kubernetes 1.29 libraries and extensions
 		ext.Sets(),
+		//nolint:mnd // extract the number 2 to a constant will not make the code more readable
 		ext.Strings(ext.StringsVersion(2)),
 		k8sLibrary.URLs(),
 		k8sLibrary.Regex(),

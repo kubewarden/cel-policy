@@ -1,4 +1,4 @@
-//nolint:varnamelen
+//nolint:lll // This file has long lines due some examples in the comments
 package library
 
 import (
@@ -8,6 +8,8 @@ import (
 	"github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci"
 	verify "github.com/kubewarden/policy-sdk-go/pkg/capabilities/oci/verify_v2"
 )
+
+const sigstoreVerifierArgsCount = 3
 
 // Sigstore provides a CEL function library extension for verifying sigstore signatures of an image.
 //
@@ -142,6 +144,7 @@ func (*sigstoreLib) LibraryName() string {
 	return "kw.sigstore"
 }
 
+//nolint:funlen // Splitting this function would make it harder to read
 func (*sigstoreLib) CompileOptions() []cel.EnvOption {
 	return []cel.EnvOption{
 		cel.Function("kw.sigstore.image",
@@ -285,7 +288,7 @@ func sigstoreImage(arg ref.Val) ref.Val {
 }
 
 func sigstoreVerifierBuilderAnnotation(args ...ref.Val) ref.Val {
-	if len(args) != 3 {
+	if len(args) != sigstoreVerifierArgsCount {
 		return types.NoSuchOverloadErr()
 	}
 
@@ -358,7 +361,7 @@ func sigstorePubKeysVerifierVerify(arg ref.Val) ref.Val {
 }
 
 func sigstoreVerifierBuilderKeyless(args ...ref.Val) ref.Val {
-	if len(args) != 3 {
+	if len(args) != sigstoreVerifierArgsCount {
 		return types.NoSuchOverloadErr()
 	}
 
@@ -388,7 +391,7 @@ func sigstoreVerifierBuilderKeyless(args ...ref.Val) ref.Val {
 }
 
 func sigstoreKeylessVerifierKeyless(args ...ref.Val) ref.Val {
-	if len(args) != 3 {
+	if len(args) != sigstoreVerifierArgsCount {
 		return types.NoSuchOverloadErr()
 	}
 
@@ -422,7 +425,7 @@ func sigstoreKeylessVerifierVerify(arg ref.Val) ref.Val {
 }
 
 func sigstoreVerifierBuilderKeylessPrefix(args ...ref.Val) ref.Val {
-	if len(args) != 3 {
+	if len(args) != sigstoreVerifierArgsCount {
 		return types.NoSuchOverloadErr()
 	}
 
@@ -452,7 +455,7 @@ func sigstoreVerifierBuilderKeylessPrefix(args ...ref.Val) ref.Val {
 }
 
 func sigstoreKeylessPrefixVerifierKeylessPrefix(args ...ref.Val) ref.Val {
-	if len(args) != 3 {
+	if len(args) != sigstoreVerifierArgsCount {
 		return types.NoSuchOverloadErr()
 	}
 
@@ -505,7 +508,7 @@ func sigstoreVerifierBuilderGitHubActionOwner(arg1, arg2 ref.Val) ref.Val {
 }
 
 func sigstoreVerifierBuilderGitHubActionOwnerRepo(args ...ref.Val) ref.Val {
-	if len(args) != 3 {
+	if len(args) != sigstoreVerifierArgsCount {
 		return types.NoSuchOverloadErr()
 	}
 
@@ -622,7 +625,7 @@ func sigstoreResponseDigest(arg ref.Val) ref.Val {
 
 var sigstoreVerifierBuilderType = cel.ObjectType("kw.sigstore.VerifierBuilder")
 
-// sigstoreVerifierBuilder is an intermediate object is used to build a specific verifier
+// sigstoreVerifierBuilder is an intermediate object is used to build a specific verifier.
 type sigstoreVerifierBuilder struct {
 	receiverOnlyObjectVal
 	image       string
@@ -631,7 +634,7 @@ type sigstoreVerifierBuilder struct {
 
 var sigstorePubKeysVerifierType = cel.ObjectType("kw.sigstore.PubKeysVerifier")
 
-// sigstorePubKeysVerifier verifies the signature of an image using a set of public keys
+// sigstorePubKeysVerifier verifies the signature of an image using a set of public keys.
 type sigstorePubKeysVerifier struct {
 	receiverOnlyObjectVal
 	image       string
@@ -654,7 +657,7 @@ func (v *sigstorePubKeysVerifier) verify() ref.Val {
 
 var sigstoreKeylessVerifierType = cel.ObjectType("kw.sigstore.KeylessVerifier")
 
-// sigstoreKeylessVerifier verifies the signature of an image using keyless signing
+// sigstoreKeylessVerifier verifies the signature of an image using keyless signing.
 type sigstoreKeylessVerifier struct {
 	receiverOnlyObjectVal
 	image       string
@@ -677,7 +680,8 @@ func (v *sigstoreKeylessVerifier) verify() ref.Val {
 
 var sigstoreKeylessPrefixVerifierType = cel.ObjectType("kw.sigstore.KeylessPrefixVerifier")
 
-// sigstoreKeylessPrefixVerifier verifies the signature of an image using keyless signing
+// sigstoreKeylessPrefixVerifier verifies the signature of an image using
+// keyless signing.
 type sigstoreKeylessPrefixVerifier struct {
 	receiverOnlyObjectVal
 	image         string
@@ -700,7 +704,8 @@ func (v *sigstoreKeylessPrefixVerifier) verify() ref.Val {
 
 var sigstoreGitHubActionVerifierType = cel.ObjectType("kw.sigstore.GitHubActionVerifier")
 
-// sigstoreGitHubActionVerifier verifies sigstore signatures of an image using keyless signatures made via Github Actions
+// sigstoreGitHubActionVerifier verifies sigstore signatures of an image using
+// keyless signatures made via Github Actions.
 type sigstoreGitHubActionVerifier struct {
 	receiverOnlyObjectVal
 	image       string
@@ -724,7 +729,7 @@ func (v *sigstoreGitHubActionVerifier) verify() ref.Val {
 
 var sigstoreCertificateVerifierType = cel.ObjectType("kw.sigstore.CertificateVerifier")
 
-// sigstoreCertificateVerifier verifies sigstore signatures of an image using a user provided certificate\
+// sigstoreCertificateVerifier verifies sigstore signatures of an image using a user provided certificate\.
 type sigstoreCertificateVerifier struct {
 	receiverOnlyObjectVal
 	image              string
@@ -749,7 +754,7 @@ func (v *sigstoreCertificateVerifier) verify() ref.Val {
 
 var sigstoreResponseType = cel.ObjectType("kw.sigstore.Response")
 
-// sigstoreResponse is the response object returned by the verify function
+// sigstoreResponse is the response object returned by the verify function.
 type sigstoreResponse struct {
 	receiverOnlyObjectVal
 	isTrusted bool
