@@ -229,7 +229,7 @@ func TestValidate(t *testing.T) {
 			payload, err := json.Marshal(validationRequest)
 			require.NoError(t, err)
 
-			response, err := Validate(payload)
+			response, err = Validate(payload)
 			require.NoError(t, err)
 
 			validationResponse := kubewardenProtocol.ValidationResponse{}
@@ -241,12 +241,12 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-// message is a helper function to create a pointer to a string
+// message is a helper function to create a pointer to a string.
 func message(s string) *string {
 	return &s
 }
 
-// code is a helper function to create a pointer to a uint16
+// code is a helper function to create a pointer to a uint16.
 func code(i uint16) *uint16 {
 	return &i
 }

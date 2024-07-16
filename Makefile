@@ -5,7 +5,7 @@ BIN_DIR := $(abspath $(ROOT_DIR)/bin)
 SOURCE_FILES := $(shell find . -type f -name '*.go')
 VERSION ?= $(shell git describe | cut -c2-)
 
-GOLANGCI_LINT_VER := v1.55.2
+GOLANGCI_LINT_VER := v1.59.1
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(BIN_DIR)/$(GOLANGCI_LINT_BIN)
 
@@ -34,6 +34,14 @@ $(GOLANGCI_LINT): ## Install golangci-lint.
 lint: $(GOLANGCI_LINT)
 	go vet ./...
 	$(GOLANGCI_LINT) run
+
+.PHONY: lint-fix
+lint-fix: $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) run --fix
+
+.PHONY: fmt
+fmt:
+	go fmt ./...
 
 .PHONY: test
 test:
