@@ -729,7 +729,7 @@ func (v *sigstoreGitHubActionVerifier) verify() ref.Val {
 
 var sigstoreCertificateVerifierType = cel.ObjectType("kw.sigstore.CertificateVerifier")
 
-// sigstoreCertificateVerifier verifies sigstore signatures of an image using a user provided certificate\.
+// sigstoreCertificateVerifier verifies sigstore signatures of an image using a user provided certificate.
 type sigstoreCertificateVerifier struct {
 	receiverOnlyObjectVal
 	image              string
