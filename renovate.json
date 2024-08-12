@@ -6,5 +6,8 @@
   ],
   "labels": [
     "dependencies"
+  ],
+  "ignoreDeps": [
+    "k8s.io/apiserver"
   ]
 }
