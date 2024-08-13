@@ -2,10 +2,10 @@ module github.com/kubewarden/cel-policy
 
 go 1.22.0
 
-toolchain go1.22.4
+toolchain go1.22.6
 
 require (
-	github.com/google/cel-go v0.20.1
+	github.com/google/cel-go v0.21.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kubewarden/k8s-objects v1.29.0-kw1
 	github.com/kubewarden/policy-sdk-go v0.11.0
