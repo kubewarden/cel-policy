@@ -172,7 +172,7 @@ func cryptoVerifierVerify(arg ref.Val) ref.Val {
 
 	response, err := cryptoCap.VerifyCert(&host, verifier.certifcate, verifier.certifcateChain, verifier.notAfter.Format(time.RFC3339))
 	if err != nil {
-		return types.NewErr(err.Error())
+		return types.NewErr("%v", err.Error())
 	}
 
 	return cryptoResponse{
