@@ -1,0 +1,32 @@
+name: Update third party directory
+
+on: 
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * MON" # Trigger this workflow every Monday at 00:00
+
+jobs:
+  third-party-update:
+    name: Update third party directory
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Install Updatecli in the runner
+        uses: updatecli/updatecli-action@d0950ebbe80f4f80c3392b288d6a218fae872f69 # v2.66.0
+
+      - name: Fetch latest Kubernetes released version
+        env:
+          UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
+        run: "updatecli apply --debug --config ./updatecli/update_api_server_files.yaml"
+
+      - name: Updates  third party directory files
+        env:
+          UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
+        run: "updatecli apply --debug --config ./updatecli/update_third_party_files.yaml --values /tmp/updatecli/values.yaml --values ./updatecli/values.yaml"
