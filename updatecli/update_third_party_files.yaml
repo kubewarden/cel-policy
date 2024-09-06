@@ -1,0 +1,121 @@
+name: "Update the third party directory with files from Kubernetes repositories"
+
+scms:
+  apiServerGit:
+    kind: "git"
+    spec:
+      url: "https://github.com/kubernetes/apiserver.git"
+      branch: "{{ .apiServerReleaseBranch }}"
+  apiMachineryGit:
+    kind: "git"
+    spec:
+      url: "https://github.com/kubernetes/apimachinery.git"
+      branch: "{{ .apiServerReleaseBranch }}"
+  default:
+      kind: github
+      spec:
+        hidecredit: true
+        user: "{{ .github.author }}"
+        email: "{{ .github.email }}"
+        owner: "{{ requiredEnv .github.owner }}"
+        repository: "cel-policy"
+        token: "{{ requiredEnv .github.token }}"
+        username: "{{ requiredEnv .github.user }}"
+        branch: "main"
+
+sources:
+  apiServerVersion:
+    kind: yaml
+    spec:
+      file: "/tmp/updatecli/values.yaml"
+      key: "$.apiServerVersion"
+  apiServerVersionNoMajor:
+    kind: yaml
+    spec:
+      file: "/tmp/updatecli/values.yaml"
+      key: "$.apiServerVersion"
+    transformers:
+      - findsubmatch:
+          pattern: '\d*.(\d*.\d*)'
+          captureindex: 1
+      - addprefix: "0."
+
+conditions:
+  updateRepo:
+    name: "Checkout apiserver repository"
+    kind: file
+    scmid: apiServerGit
+    disablesourceinput: true
+    spec:
+      file: go.mod
+  updateApiMachineryRepo:
+    name: "Checkout apimachinery repository"
+    kind: file
+    scmid: apiMachineryGit
+    disablesourceinput: true
+    spec:
+      file: go.mod
+
+targets:
+  readmeUpdate:
+    name: "Update third party directory README file"
+    kind: "file"
+    disablesourceinput: true
+    scmid: "default"
+    spec:
+      file: "./third_party/README.md"
+      content: |
+        This folder contains third-party code from kubernetes:
+        
+        - [kubernetes/apiserver](https://github.com/kubernetes/apiserver).
+        - [kubernetes/apimachinery](https://github.com/kubernetes/apimachinery).
+        
+        The current version is based on kubernetes v{{ source "apiServerVersion" }} (apiserver/apimachinery v{{ source "apiServerVersionNoMajor" }}).
+        
+        All code in this folder is licensed under the Apache License 2.0, see [LICENSE](LICENSE).
+  apiServerUpdate: 
+    name: "Get latest apiserver files"
+    kind: shell
+    scmid: "default"
+    disablesourceinput: true
+    spec:
+      command: bash updatecli/scripts/install-third-party.sh
+      environments:
+        - name: "REPOSITORY_DIR"
+          value: "/tmp/updatecli/github_com_kubernetes_apiserver_git"
+        - name: "DESTINATION_DIR"
+          value: "third_party/k8s.io/apiserver/"
+        - name: "FILES"
+          value: "pkg/apis/cel/config.go pkg/cel/errors.go pkg/cel/limits.go pkg/cel/quantity.go pkg/cel/types.go pkg/cel/url.go pkg/cel/value.go pkg/cel/OWNERS pkg/cel/library/lists.go pkg/cel/library/regex.go pkg/cel/library/test.go pkg/cel/library/urls.go"
+  apiMachineryUpdate: 
+    name: "Get latest apimachinery files"
+    kind: shell
+    scmid: "default"
+    disablesourceinput: true
+    spec:
+      command: bash updatecli/scripts/install-third-party.sh
+      environments:
+        - name: "REPOSITORY_DIR"
+          value: "/tmp/updatecli/github_com_kubernetes_apimachinery_git"
+        - name: "DESTINATION_DIR"
+          value: "third_party/k8s.io/apimachinery/"
+        - name: "FILES"
+          value: "pkg/api/resource/amount.go pkg/api/resource/quantity.go pkg/api/resource/math.go pkg/api/resource/scale_int.go pkg/api/resource/suffix.go"
+
+actions:
+  createUpdatePR:
+    kind: "github/pullrequest"
+    title: "Update third_party directory with files from Kubernetes v{{ .apiServerVersion }}"
+    scmid: "default"
+    spec:
+      automerge: false
+      mergemethod: squash
+      description: |
+        Automatic third_party directory update with the files from the Kubernetes v{{ .apiServerVersion }}.
+
+        REMEMBER IF YOU WANT TO MERGE IN A SINGLE COMMIT CHANGES AND VERSION BUMP, YOU MUST SQUASH THE COMMIT BEFORE MERGING THIS PR!
+      draft: false
+      maintainercanmodify: true
+      labels:
+        - "kind/chore"
+        - "area/dependencies"

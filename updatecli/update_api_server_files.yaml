@@ -1,0 +1,79 @@
+name: "Get latest apiserver and apimachinery released version"
+
+scms:
+  apiServerGit:
+    kind: "git"
+    spec:
+        url: "https://github.com/kubernetes/apiserver.git"
+        branch: "master"
+  apiMachineryGit:
+    kind: "git"
+    spec:
+        url: "https://github.com/kubernetes/apimachinery.git"
+        branch: "master"
+
+sources:
+  latestApiServerTag: 
+    name: Get Latest apiserver tag
+    kind: gittag
+    scmid: apiServerGit
+    spec:
+      versionfilter:
+        kind: semver
+        pattern: <1
+    transformers:
+      - findsubmatch:
+          pattern: 'v\d*.(\d*.\d*)'
+          captureindex: 1
+      - addprefix: "1."
+  latestApiServerBranch: 
+    name: Get Latest apiserver release branch
+    kind: gittag
+    scmid: apiServerGit
+    spec:
+      versionfilter:
+        kind: semver
+        pattern: <1
+    transformers:
+      - findsubmatch:
+          pattern: 'v\d*.(\d*).\d*'
+          captureindex: 1
+      - addprefix: "release-1."
+
+conditions:
+  latestApiServerTag:
+    name: Check that the latest kubernetes tag exist in API Server
+    kind: gittag
+    sourceid: latestApiServerTag
+    scmid: apiServerGit
+    transformers:
+      - addprefix: "kubernetes-"
+  latestApiServerBranch:
+    name: Check that the latest kubernetes branch exist in API Server
+    kind: gitbranch
+    sourceid: latestApiServerBranch
+    scmid: apiServerGit
+  latestApiMachineryTag:
+    name: Check that the latest kubernetes tag exist in API Machinery
+    kind: gittag
+    sourceid: latestApiServerTag
+    scmid: apiMachineryGit
+    transformers:
+      - addprefix: "kubernetes-"
+  latestApiMachineryBranch:
+    name: Check that the latest kubernetes branch exist in API Machinery
+    kind: gitbranch
+    sourceid: latestApiServerBranch
+    scmid: apiMachineryGit
+
+targets:
+  # Save the tag and branch found in a file to be used in another updatecli script
+  update-apiserver-version:
+    kind: file
+    disablesourceinput: true
+    spec:
+      forcecreate: true
+      file: "/tmp/updatecli/values.yaml"
+      content: |
+        apiServerVersion: {{ source "latestApiServerTag" }}
+        apiServerReleaseBranch:  {{ source "latestApiServerBranch" }}
