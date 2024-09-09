@@ -86,7 +86,10 @@ targets:
         - name: "DESTINATION_DIR"
           value: "third_party/k8s.io/apiserver/"
         - name: "FILES"
-          value: "pkg/apis/cel/config.go pkg/cel/errors.go pkg/cel/limits.go pkg/cel/quantity.go pkg/cel/types.go pkg/cel/url.go pkg/cel/value.go pkg/cel/OWNERS pkg/cel/library/lists.go pkg/cel/library/regex.go pkg/cel/library/test.go pkg/cel/library/urls.go"
+          value: "pkg/apis/cel/config.go pkg/cel/OWNERS pkg/cel/errors.go pkg/cel/escaping.go \
+                  pkg/cel/library/lists.go pkg/cel/library/regex.go pkg/cel/library/test.go \
+                  pkg/cel/library/urls.go pkg/cel/limits.go pkg/cel/quantity.go pkg/cel/types.go \
+                  pkg/cel/url.go pkg/cel/value.go"
   apiMachineryUpdate: 
     name: "Get latest apimachinery files"
     kind: shell
@@ -100,7 +103,8 @@ targets:
         - name: "DESTINATION_DIR"
           value: "third_party/k8s.io/apimachinery/"
         - name: "FILES"
-          value: "pkg/api/resource/amount.go pkg/api/resource/quantity.go pkg/api/resource/math.go pkg/api/resource/scale_int.go pkg/api/resource/suffix.go"
+          value: "pkg/api/resource/amount.go pkg/api/resource/quantity.go pkg/api/resource/math.go \
+                  pkg/api/resource/scale_int.go pkg/api/resource/suffix.go"
 
 actions:
   createUpdatePR:
