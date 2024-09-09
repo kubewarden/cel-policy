@@ -2,7 +2,7 @@ module github.com/kubewarden/cel-policy
 
 go 1.22.0
 
-toolchain go1.23.0
+toolchain go1.23.1
 
 require (
 	github.com/google/cel-go v0.21.0
