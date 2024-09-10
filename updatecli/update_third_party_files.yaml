@@ -105,6 +105,21 @@ targets:
         - name: "FILES"
           value: "pkg/api/resource/amount.go pkg/api/resource/quantity.go pkg/api/resource/math.go \
                   pkg/api/resource/scale_int.go pkg/api/resource/suffix.go"
+  goModTidy:
+    disablesourceinput: true
+    kind: shell
+    name: Run `go mod tidy`
+    spec:
+      changedif:
+        kind: file/checksum
+        spec:
+          files:
+            - go.mod
+            - go.sum
+      command: go mod tidy
+      environments:
+        - name: HOME
+        - name: PATH
 
 actions:
   createUpdatePR:
