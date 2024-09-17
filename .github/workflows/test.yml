@@ -1,47 +1,6 @@
-on:
-  push:
-  pull_request:
-  workflow_call:
-
+on: [push, pull_request]
 name: Continuous integration
 jobs:
   test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
-        with:
-          go-version: "1.23"
-      - run: make test
-
-  e2e-test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
-        with:
-          go-version: "1.23"
-      - name: Setup BATS
-        uses: mig4/setup-bats@v1.2.0
-        with:
-          bats-version: 1.11.0
-      - name: Install dependencies
-        uses: kubewarden/github-actions/policy-gh-action-dependencies@v3.3.4
-      - name: Install kwctl
-        uses: kubewarden/github-actions/kwctl-installer@v3.3.4
-      - run: make e2e-tests
-
-  golangci:
-    name: Golangci-lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
-        with:
-          go-version: "1.23"
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@aaa42aa0628b4ae2578232a66b541047968fac86 # v6.1.0
-        with:
-          version: v1.60.1
+    name: run tests and linters
+    uses: kubewarden/github-actions/.github/workflows/reusable-test-policy-go-wasi.yml@v3.3.5
