@@ -22,6 +22,8 @@ scms:
         token: "{{ requiredEnv .github.token }}"
         username: "{{ requiredEnv .github.user }}"
         branch: "main"
+        commitmessage:
+          footers: "Signed-off-by: Kubewarden maintainers <cncf-kubewarden-maintainers@cncf-kubewarden-maintainers>"
 
 sources:
   apiServerVersion:
