@@ -41,6 +41,13 @@ sources:
           pattern: '\d*.(\d*.\d*)'
           captureindex: 1
       - addprefix: "0."
+  goModApiServerVersion:
+    kind: yaml
+    spec:
+      file: "/tmp/updatecli/values.yaml"
+      key: "$.apiServerVersion"
+    transformers:
+      - addprefix: "v"
 
 conditions:
   updateRepo:
@@ -107,7 +114,31 @@ targets:
         - name: "FILES"
           value: "pkg/api/resource/amount.go pkg/api/resource/quantity.go pkg/api/resource/math.go \
                   pkg/api/resource/scale_int.go pkg/api/resource/suffix.go"
+  updateApiServerVersion:
+    kind: golang/gomod
+    name: Update apiserver version in use
+    scmid: default
+    sourceid: goModApiServerVersion
+    spec:
+      module: "k8s.io/apiserver"
+  updateGoReplacements:
+    name: "Update go.mod replaces for k8s.io/apiserver and k8s.io/apimachinery packages"
+    kind: shell
+    scmid: "default"
+    disablesourceinput: true
+    spec:
+      command: 'go mod edit -replace=k8s.io/apiserver@{{ source "goModApiServerVersion" }}=./third_party/k8s.io/apiserver/ -replace=k8s.io/apimachinery@{{ source "goModApiServerVersion" }}=./third_party/k8s.io/apimachinery/'
+      environments:
+        - name: HOME
+        - name: PATH
+      changedif:
+        kind: file/checksum
+        spec:
+          files:
+            - go.mod
   goModTidy:
+    dependson:
+      - updateGoReplacements
     disablesourceinput: true
     kind: shell
     name: Run `go mod tidy`
