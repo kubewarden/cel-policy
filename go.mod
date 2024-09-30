@@ -16,9 +16,15 @@ require (
 
 replace github.com/go-openapi/strfmt => github.com/kubewarden/strfmt v0.1.3
 
-replace k8s.io/apiserver v0.29.1 => ./third_party/k8s.io/apiserver/
+replace (
+	k8s.io/apiserver v0.29.1 => ./third_party/k8s.io/apiserver/
+	k8s.io/apiserver v1.31.1 => ./third_party/k8s.io/apiserver/
+)
 
-replace k8s.io/apimachinery v0.29.1 => ./third_party/k8s.io/apimachinery/
+replace (
+	k8s.io/apimachinery v0.29.1 => ./third_party/k8s.io/apimachinery/
+	k8s.io/apimachinery v1.31.1 => ./third_party/k8s.io/apimachinery/
+)
 
 require (
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
