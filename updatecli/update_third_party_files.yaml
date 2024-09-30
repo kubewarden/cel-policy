@@ -12,18 +12,18 @@ scms:
       url: "https://github.com/kubernetes/apimachinery.git"
       branch: "{{ .apiServerReleaseBranch }}"
   default:
-      kind: github
-      spec:
-        hidecredit: true
-        user: "{{ .github.author }}"
-        email: "{{ .github.email }}"
-        owner: "{{ requiredEnv .github.owner }}"
-        repository: "cel-policy"
-        token: "{{ requiredEnv .github.token }}"
-        username: "{{ requiredEnv .github.user }}"
-        branch: "main"
-        commitmessage:
-          footers: "Signed-off-by: Kubewarden maintainers <cncf-kubewarden-maintainers@cncf-kubewarden-maintainers>"
+    kind: github
+    spec:
+      hidecredit: true
+      user: "{{ .github.author }}"
+      email: "{{ .github.email }}"
+      owner: "{{ requiredEnv .github.owner }}"
+      repository: "cel-policy"
+      token: "{{ requiredEnv .github.token }}"
+      username: "{{ requiredEnv .github.user }}"
+      branch: "main"
+      commitmessage:
+        footers: "Signed-off-by: Kubewarden bot <cncf-kubewarden-maintainers@lists.cncf.io>"
 
 sources:
   apiServerVersion:
