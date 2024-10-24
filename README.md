@@ -67,7 +67,7 @@ metadata:
     io.kubewarden.policy.severity: low
   name: "demo-policy.example.com"
 spec:
-  module: registry://ghcr.io/kubewarden/policies/cel-policy:0.1.0
+  module: registry://ghcr.io/kubewarden/policies/cel-policy:latest
   settings:
     variables:
       - name: "replicas"
