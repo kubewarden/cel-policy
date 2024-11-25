@@ -20,12 +20,14 @@ replace (
 	k8s.io/apiserver v0.29.1 => ./third_party/k8s.io/apiserver/
 	k8s.io/apiserver v1.31.1 => ./third_party/k8s.io/apiserver/
 	k8s.io/apiserver v1.31.2 => ./third_party/k8s.io/apiserver/
+	k8s.io/apiserver v1.31.3 => ./third_party/k8s.io/apiserver/
 )
 
 replace (
 	k8s.io/apimachinery v0.29.1 => ./third_party/k8s.io/apimachinery/
 	k8s.io/apimachinery v1.31.1 => ./third_party/k8s.io/apimachinery/
 	k8s.io/apimachinery v1.31.2 => ./third_party/k8s.io/apimachinery/
+	k8s.io/apimachinery v1.31.3 => ./third_party/k8s.io/apimachinery/
 )
 
 require (
