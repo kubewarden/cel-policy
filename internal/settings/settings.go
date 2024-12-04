@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/kubewarden/cel-policy/internal/cel"
 	kubewarden "github.com/kubewarden/policy-sdk-go"
-	kubewardenProtocol "github.com/kubewarden/policy-sdk-go/protocol"
 )
 
 const (
@@ -64,15 +63,6 @@ func (v *Validation) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
-}
-
-func NewSettingsFromValidationReq(validationReq *kubewardenProtocol.ValidationRequest) (Settings, error) {
-	settings := Settings{}
-
-	if err := json.Unmarshal(validationReq.Settings, &settings); err != nil {
-		return Settings{}, fmt.Errorf("cannot unmarshal settings %w", err)
-	}
-	return settings, nil
 }
 
 // ValidateSettings validates the settings of the policy
