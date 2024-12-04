@@ -13,7 +13,7 @@ import (
 	"github.com/kubewarden/cel-policy/internal/cel"
 	"github.com/kubewarden/cel-policy/internal/settings"
 	kubewarden "github.com/kubewarden/policy-sdk-go"
-	kubewardenProtocol "github.com/kubewarden/policy-sdk-go/protocol"
+	"github.com/kubewarden/policy-sdk-go/protocol"
 )
 
 const (
@@ -23,20 +23,24 @@ const (
 	httpUnauthorizedStatusCode   = 401
 )
 
-func Validate(payload []byte) ([]byte, error) {
-	validationRequest := kubewardenProtocol.ValidationRequest{}
+type ValidationRequest struct {
+	Request  json.RawMessage   `json:"request"`
+	Settings settings.Settings `json:"settings"`
+}
 
-	err := json.Unmarshal(payload, &validationRequest)
-	if err != nil {
+func Validate(payload []byte) ([]byte, error) {
+	validationRequest := ValidationRequest{}
+
+	if err := json.Unmarshal(payload, &validationRequest); err != nil {
 		return kubewarden.RejectRequest(
 			kubewarden.Message(fmt.Sprintf("Error deserializing validation request: %v", err)),
 			kubewarden.Code(httpBadRequestStatusCode))
 	}
 
-	settings, err := settings.NewSettingsFromValidationReq(&validationRequest)
-	if err != nil {
+	request := protocol.KubernetesAdmissionRequest{}
+	if err := json.Unmarshal(validationRequest.Request, &request); err != nil {
 		return kubewarden.RejectRequest(
-			kubewarden.Message(fmt.Sprintf("Error serializing RawMessage: %v", err)),
+			kubewarden.Message(fmt.Sprintf("Error deserializing request: %v", err)),
 			kubewarden.Code(httpBadRequestStatusCode))
 	}
 
@@ -46,30 +50,35 @@ func Validate(payload []byte) ([]byte, error) {
 	}
 
 	object := map[string]interface{}{}
-	err = json.Unmarshal(validationRequest.Request.Object, &object)
+	err = json.Unmarshal(request.Object, &object)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal request object %w", err)
 	}
 
 	oldObject := map[string]interface{}{}
-	if validationRequest.Request.OldObject != nil {
-		err = json.Unmarshal(validationRequest.Request.OldObject, &oldObject)
+	if request.OldObject != nil {
+		err = json.Unmarshal(request.OldObject, &oldObject)
 		if err != nil {
 			return nil, fmt.Errorf("cannot unmarshal request oldObject %w", err)
 		}
 	}
 
-	objectMeta, ok := object["metadata"].(map[string]interface{})
-	if !ok {
-		return nil, errors.New("wrong object format: metadata not found in object")
+	requestMap := map[string]interface{}{}
+	if err := json.Unmarshal(validationRequest.Request, &requestMap); err != nil {
+		return nil, fmt.Errorf("cannot unmarshal request %w", err)
 	}
 
 	vars := map[string]interface{}{
 		"object":    object,
 		"oldObject": oldObject,
-		"request":   validationRequest.Request,
+		"request":   requestMap,
 		"namespaceObject": func() ref.Val {
 			// lazy load namespaceObject
+			objectMeta, ok := object["metadata"].(map[string]interface{})
+			if !ok {
+				return types.NullValue
+			}
+
 			if objectNamespace, ok := objectMeta["namespace"].(string); ok && objectNamespace != "" {
 				return getNamespaceObject(objectNamespace)
 			}
@@ -78,11 +87,11 @@ func Validate(payload []byte) ([]byte, error) {
 		},
 	}
 
-	if err = evalVariables(compiler, vars, settings.Variables); err != nil {
+	if err = evalVariables(compiler, vars, validationRequest.Settings.Variables); err != nil {
 		return nil, fmt.Errorf("failed to evaluate variables: %w", err)
 	}
 
-	return evalValidations(compiler, vars, settings.Validations)
+	return evalValidations(compiler, vars, validationRequest.Settings.Validations)
 }
 
 func evalVariables(compiler *cel.Compiler, vars map[string]interface{}, variables []settings.Variable) error {

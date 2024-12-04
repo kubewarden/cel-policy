@@ -141,7 +141,7 @@ func TestValidate(t *testing.T) {
 					},
 					{
 						Name:       "podMeta",
-						Expression: "object.metadata",
+						Expression: "request.object.metadata",
 					},
 					{
 						Name:       "podName",
