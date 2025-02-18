@@ -12,7 +12,6 @@ run:
   # Default: 1m
   timeout: 3m
 
-
 # This file contains only configs which differ from defaults.
 # All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
 linters-settings:
@@ -166,7 +165,7 @@ linters-settings:
   nolintlint:
     # Exclude following linters from requiring an explanation.
     # Default: []
-    allow-no-explanation: [ funlen, gocognit, lll ]
+    allow-no-explanation: [funlen, gocognit, lll]
     # Enable to require an explanation of nonzero length after each nolint directive.
     # Default: false
     require-explanation: true
@@ -208,7 +207,6 @@ linters-settings:
     # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
     # Default: false
     all: true
-
 
 linters:
   disable-all: true
@@ -324,17 +322,16 @@ linters:
     #- thelper # detects golang test helpers without t.Helper() call and checks the consistency of test helpers
     #- wsl # [too strict and mostly code is not more readable] whitespace linter forces you to use empty lines
 
-
     ############################################################################
     # Kubewarden linter customization
     # The following linters are disabled because they does not make sense for
-    # the Kubewarden 
+    # the Kubewarden
     ############################################################################
 
     # We disable the testpackage linter because we have tests which is not
     # black boxed and that will not cause issues for us for now.
     # - testpackage # makes you use a separate _test package
-    
+
     # We use replace directives in go.mod to replace some dependencies to use
     # our forked or stripped versions.
     # - gomoddirectives # manages the use of 'replace', 'retract', and 'excludes' directives in go.mod
@@ -351,9 +348,9 @@ issues:
 
   exclude-rules:
     - source: "(noinspection|TODO)"
-      linters: [ godot ]
+      linters: [godot]
     - source: "//noinspection"
-      linters: [ gocritic ]
+      linters: [gocritic]
     - path: "_test\\.go"
       linters:
         - bodyclose
