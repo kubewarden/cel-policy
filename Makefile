@@ -43,7 +43,6 @@ test:
 clean:
 	go clean
 	rm -f policy.wasm annotated-policy.wasm
-	rm -f policy.wasm annotated-policy.wasm artifacthub-pkg.yml
 
 .PHONY: e2e-tests
 e2e-tests: annotated-policy.wasm
