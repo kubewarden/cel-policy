@@ -43,6 +43,8 @@ func NewCompiler() (*Compiler, error) {
 		ext.Sets(),
 		//nolint:mnd // extract the number 2 to a constant will not make the code more readable
 		ext.Strings(ext.StringsVersion(2)),
+		// allow base64 encoding/decoding
+		ext.Encoders(),
 		k8sLibrary.URLs(),
 		k8sLibrary.Regex(),
 		k8sLibrary.Lists(),
