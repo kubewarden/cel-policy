@@ -98,6 +98,14 @@ The following host capabilities are available:
 | [crypto](https://docs.kubewarden.io/reference/spec/host-capabilities/crypto)                        | Host-side cryptographic functions             | [**Crypto**](https://pkg.go.dev/github.com/kubewarden/cel-policy/internal/cel/library#Crypto)         |
 | [net](https://docs.kubewarden.io/reference/spec/host-capabilities/net)                              | Network operations                            | [**Net**](https://pkg.go.dev/github.com/kubewarden/cel-policy/internal/cel/library#Net)               |
 
+## Extensions
+
+CEL policy has some extensions that add extra functionality to the language that are not defined in the language definition. The CEL policy has the following extensions enabled:
+
+| Extension       | Description                                  | Documentation                                                                 |
+| --------------- | -------------------------------------------- | ----------------------------------------------------------------------------- |
+| Base64 Encoders | Allows users to encode/decode base64 strings | [Encoder extension](https://pkg.go.dev/github.com/google/cel-go/ext#Encoders) |
+
 ## Known limitations
 
 At the moment the policy does not support the following Kubernetes extensions:
