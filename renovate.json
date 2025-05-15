@@ -1,5 +1,5 @@
 {
-  "extends": ["github>kubewarden/github-actions//renovate-config/default"],
+  "extends": ["github>kubewarden/github-actions//renovate-config/policies"],
   "ignoreDeps": [
     "k8s.io/apiserver"
   ]
