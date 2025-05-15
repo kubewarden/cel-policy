@@ -1,12 +1,5 @@
 {
-  "extends": [
-    "config:base",
-    "group:allNonMajor",
-    "schedule:earlyMondays"
-  ],
-  "labels": [
-    "dependencies"
-  ],
+  "extends": ["github>kubewarden/github-actions//renovate-config/default"],
   "ignoreDeps": [
     "k8s.io/apiserver"
   ]
