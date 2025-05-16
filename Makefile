@@ -5,7 +5,7 @@ BIN_DIR := $(abspath $(ROOT_DIR)/bin)
 SOURCE_FILES := $(shell find . -type f -name '*.go')
 VERSION ?= $(shell git describe | cut -c2-)
 
-GOLANGCI_LINT_VER := v1.64.5
+GOLANGCI_LINT_VER := v2.1.6
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(BIN_DIR)/$(GOLANGCI_LINT_BIN)
 
@@ -20,7 +20,7 @@ annotated-policy.wasm: policy.wasm metadata.yml
 
 golangci-lint: $(GOLANGCI_LINT) ## Install a local copy of golang ci-lint.
 $(GOLANGCI_LINT): ## Install golangci-lint.
-	GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
+	GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT)
