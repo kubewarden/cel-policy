@@ -8,7 +8,7 @@ require (
 	github.com/google/cel-go v0.25.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kubewarden/k8s-objects v1.29.0-kw1
-	github.com/kubewarden/policy-sdk-go v0.11.1
+	github.com/kubewarden/policy-sdk-go v0.12.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/apiserver v1.33.2
