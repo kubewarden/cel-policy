@@ -11,7 +11,7 @@ require (
 	github.com/kubewarden/policy-sdk-go v0.12.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/stretchr/testify v1.10.0
-	k8s.io/apiserver v1.33.2
+	k8s.io/apiserver v1.33.3
 )
 
 replace github.com/go-openapi/strfmt => github.com/kubewarden/strfmt v0.1.3
