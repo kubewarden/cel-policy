@@ -85,6 +85,19 @@ func Validate(payload []byte) ([]byte, error) {
 
 			return types.NullValue
 		},
+		"params": func() ref.Val {
+			name := validationRequest.Settings.ParamRef.Name
+			namespace := validationRequest.Settings.ParamRef.Namespace
+			if name == "" {
+				namespace = requestMap["namespace"].(string)
+			}
+			apiVersion := validationRequest.Settings.ParamKind.APIVersion
+			kind := validationRequest.Settings.ParamKind.Kind
+			if name != "" {
+				return getKubernetesResource(name, namespace, apiVersion, kind)
+			}
+			return types.NullValue
+		},
 	}
 
 	if err = evalVariables(compiler, vars, validationRequest.Settings.Variables); err != nil {
