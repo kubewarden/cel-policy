@@ -1,0 +1,32 @@
+{
+  "variables": [
+    {
+      "name": "deploymentSpec",
+      "expression": "object.spec"
+    },
+    {
+      "name": "replicas",
+      "expression": "variables.deploymentSpec.replicas"
+    },
+    {
+      "name": "namespaceName",
+      "expression": "namespaceObject.metadata.name"
+    }
+  ],
+  "paramKind": {
+    "APIVersion": "v1",
+    "Kind": "ConfigMap"
+  },
+  "paramRef": {
+    "Name": "my-config",
+    "Namespace": "default",
+    "ParameterNotFoundAction": "Deny"
+  },
+  "validations": [
+    {
+      "expression": "variables.replicas <= int(params.data.maxreplicas)",
+      "messageExpression": "'Deployment: ' + object.metadata.name + ', namespace: ' + variables.namespaceName + ' - replicas must be no greater than ' + string(params.data.maxreplicas)",
+      "reason": "Unauthorized"
+    }
+  ]
+}
