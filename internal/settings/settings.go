@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/kubewarden/cel-policy/internal/cel"
 	kubewarden "github.com/kubewarden/policy-sdk-go"
+	"k8s.io/kubernetes/pkg/apis/admissionregistration"
 )
 
 const (
@@ -30,8 +31,10 @@ var supportedValidationPolicyReason = []string{
 
 // Settings defines the settings of the policy.
 type Settings struct {
-	Variables   []Variable   `json:"variables"`
-	Validations []Validation `json:"validations"`
+	Variables   []Variable                       `json:"variables"`
+	Validations []Validation                     `json:"validations"`
+	ParamKind   *admissionregistration.ParamKind `json:"paramKind,omitempty"`
+	ParamRef    *admissionregistration.ParamRef  `json:"paramRef,omitempty"`
 }
 
 type Variable struct {
@@ -77,6 +80,10 @@ func ValidateSettings(input []byte) ([]byte, error) {
 
 	var result *multierror.Error
 
+	if err := validateParams(settings); err != nil {
+		result = multierror.Append(result, fmt.Errorf("failed to validate params: %w", err))
+	}
+
 	if len(settings.Validations) == 0 {
 		err := newRequiredValueError("validations", "validations must contain at least one item")
 		result = multierror.Append(result, err)
@@ -99,6 +106,12 @@ func ValidateSettings(input []byte) ([]byte, error) {
 		}
 	}
 
+	if settings.ParamKind != nil && settings.ParamRef != nil {
+		if err := compiler.AddVariable("params", types.DynType); err != nil {
+			return nil, fmt.Errorf("failed to extend CEL env: %w", err)
+		}
+	}
+
 	for index, validation := range settings.Validations {
 		if err := validateValidations(compiler, index, validation); err != nil {
 			result = multierror.Append(result, err)
@@ -110,6 +123,23 @@ func ValidateSettings(input []byte) ([]byte, error) {
 	}
 
 	return kubewarden.AcceptSettings()
+}
+
+func validateParams(settings Settings) error {
+	// no params, no validation needed
+	if settings.ParamKind == nil && settings.ParamRef == nil {
+		return nil
+	}
+	if settings.ParamKind != nil && (settings.ParamKind.APIVersion == "" || settings.ParamKind.Kind == "") {
+		return newRequiredValueError("paramKind", "paramKind must have both APIVersion and Kind specified")
+	}
+	if settings.ParamRef != nil && (settings.ParamRef.Name == "" && settings.ParamRef.Selector == nil) {
+		return newRequiredValueError("paramRef", "paramRef must have either Name or Selector specified")
+	}
+	if settings.ParamRef != nil && (settings.ParamRef.Name != "" && settings.ParamRef.Selector != nil) {
+		return newInvalidValueError("paramRef", settings.ParamRef.Name, "paramRef cannot have both Name and Selector specified")
+	}
+	return nil
 }
 
 func validateVariable(compiler *cel.Compiler, index int, variable Variable) (*types.Type, error) {

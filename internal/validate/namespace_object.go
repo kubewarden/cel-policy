@@ -35,3 +35,24 @@ func getNamespaceObject(name string) ref.Val {
 
 	return types.NewDynamicMap(types.DefaultTypeAdapter, namespaceObjectData)
 }
+
+func getKubernetesResource(name string, namespace string, apiVersion string, kind string) ref.Val {
+	resourceRequest := kubernetes.GetResourceRequest{
+		APIVersion: apiVersion,
+		Kind:       kind,
+		Name:       name,
+		Namespace:  &namespace,
+	}
+
+	responseBytes, err := kubernetes.GetResource(&host, resourceRequest)
+	if err != nil {
+		return types.NewErr("cannot get Kubernetes resource: %s", err)
+	}
+
+	var response map[string]any
+	if err = json.Unmarshal(responseBytes, &response); err != nil {
+		return types.NewErr("cannot unmarshal Kubernetes resource response: %s", err)
+	}
+
+	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
+}

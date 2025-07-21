@@ -7,6 +7,8 @@ mutating: false
 contextAwareResources:
   - apiVersion: v1
     kind: Namespace
+  - apiVersion: v1
+    kind: ConfigMap
 executionMode: wasi
 # Consider the policy for the background audit scans. Default is true. Note the
 # intrinsic limitations of the background audit feature on docs.kubewarden.io;

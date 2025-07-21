@@ -2,11 +2,16 @@ package settings
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
+
+	"gopkg.in/yaml.v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubewarden/policy-sdk-go/protocol"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/kubernetes/pkg/apis/admissionregistration"
 )
 
 // TestValidateSettings unit tests adapted from:
@@ -159,6 +164,79 @@ func TestValidateSettings(t *testing.T) {
 			},
 			expectedError: `variables[1].expression: Invalid value: "variables.foo + 1": compilation failed: ERROR: <input>:1:10: undefined field 'foo'`,
 		},
+		{
+			name: "invalid ParamKind",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "",
+					Kind:       "",
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `paramKind must have both APIVersion and Kind specified`,
+		},
+		{
+			name: "invalid ParamRef",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Name:     "",
+					Selector: nil,
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `paramRef must have either Name or Selector specified`,
+		},
+		{
+			name: "ParamRef cannot have both Name and Selector",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Name: "my-config",
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": "my-app"},
+					},
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `paramRef cannot have both Name and Selector specified`,
+		},
 	}
 
 	for _, test := range tests {
@@ -177,4 +255,60 @@ func TestValidateSettings(t *testing.T) {
 			assert.Contains(t, *settingsValidationResponse.Message, test.expectedError)
 		})
 	}
+}
+
+func TestSerialization(t *testing.T) {
+	settings := Settings{
+		Variables: []Variable{
+			{
+				Name:       "correct",
+				Expression: "object",
+			},
+		},
+		ParamKind: &admissionregistration.ParamKind{
+			APIVersion: "v1",
+		},
+		ParamRef: &admissionregistration.ParamRef{
+			Name: "",
+		},
+		Validations: []Validation{
+			{
+				Expression: "0 > 1",
+			},
+		},
+	}
+	serialized, err := json.Marshal(settings)
+	require.NoError(t, err)
+	fmt.Println(string(serialized))
+	serialized, err = yaml.Marshal(settings)
+	require.NoError(t, err)
+	fmt.Println(string(serialized))
+
+	settingsString := []byte(`
+	
+{
+  "paramKind": {
+    "APIVersion": "v1",
+    "Kind": "kind"
+  },
+  "paramRef": {
+    "Name": "name",
+    "Namespace": "namespace",
+    "Selector": null,
+    "ParameterNotFoundAction": null
+  },
+  "validations": [
+    {
+      "expression": "0 <= 2",
+      "messageExpression": "Invalid value",
+      "reason": "Unauthorized"
+    }
+  ]
+}
+`)
+	settings = Settings{}
+	err = json.Unmarshal(settingsString, &settings)
+	require.NoError(t, err)
+	fmt.Printf("%+v\n", settings.ParamKind)
+	fmt.Printf("%+v\n", settings.ParamRef)
 }
