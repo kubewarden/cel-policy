@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/kubewarden/policy-sdk-go/protocol"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/kubernetes/pkg/apis/admissionregistration"
 )
 
 // TestValidateSettings unit tests adapted from:
@@ -74,6 +78,23 @@ func TestValidateSettings(t *testing.T) {
 				},
 			},
 			expectedError: `variables[0].name: Required value: name is not specified`,
+		},
+		{
+			name: "variable name cannot be 'params'",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "params",
+						Expression: "true",
+					},
+				},
+				Validations: []Validation{
+					{
+						Expression: "true",
+					},
+				},
+			},
+			expectedError: `'params' name is not allowed. It can conflicts with the 'params' from the policy paramaters configuration`,
 		},
 		{
 			name: "variable composition name is not a valid identifier",
@@ -159,6 +180,121 @@ func TestValidateSettings(t *testing.T) {
 			},
 			expectedError: `variables[1].expression: Invalid value: "variables.foo + 1": compilation failed: ERROR: <input>:1:10: undefined field 'foo'`,
 		},
+		{
+			name: "invalid ParamKind",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "",
+					Kind:       "",
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `paramKind must have both APIVersion and Kind specified`,
+		},
+		{
+			name: "invalid ParamRef",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Name:     "",
+					Selector: nil,
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `paramRef must have either Name or Selector specified`,
+		},
+		{
+			name: "ParamRef cannot have both Name and Selector",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Name: "my-config",
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": "my-app"},
+					},
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `paramRef cannot have both Name and Selector specified`,
+		},
+		{
+			name: "ParamRef must define a valid ParameterNotFoundAction",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Name: "my-config",
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified`,
+		},
+		{
+			name: "failurePolicy allow values",
+			settings: Settings{
+				FailurePolicy: "Other",
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `failurePolicy must be either 'Ignore' or 'Fail'`,
+		},
 	}
 
 	for _, test := range tests {
@@ -177,4 +313,129 @@ func TestValidateSettings(t *testing.T) {
 			assert.Contains(t, *settingsValidationResponse.Message, test.expectedError)
 		})
 	}
+}
+
+func TestSerialization(t *testing.T) {
+	action := admissionregistration.DenyAction
+	expectedsettings := Settings{
+		FailurePolicy: admissionregistration.Ignore,
+		Variables: []Variable{
+			{
+				Name:       "correct",
+				Expression: "object",
+			},
+		},
+		ParamKind: &admissionregistration.ParamKind{
+			APIVersion: "v1",
+			Kind:       "kind",
+		},
+		ParamRef: &admissionregistration.ParamRef{
+			Name:      "name",
+			Namespace: "namespace",
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "my-app",
+				},
+			},
+			ParameterNotFoundAction: &action,
+		},
+		Validations: []Validation{
+			{
+				Expression:        "0 <= 2",
+				MessageExpression: "Invalid value",
+				Reason:            "Unauthorized",
+			},
+		},
+	}
+	_, err := json.Marshal(expectedsettings)
+	require.NoError(t, err)
+	_, err = yaml.Marshal(expectedsettings)
+	require.NoError(t, err)
+
+	settingsString := []byte(`
+	
+{
+	"failurePolicy": "Ignore",
+	"variables": [
+	{"name": "correct", "expression": "object"}
+	],
+  "paramKind": {
+    "APIVersion": "v1",
+    "Kind": "kind"
+  },
+  "paramRef": {
+    "Name": "name",
+    "Namespace": "namespace",
+  	"Selector": {"matchLabels":{"app":"my-app"}},
+    "ParameterNotFoundAction": "Deny"
+  },
+  "validations": [
+    {
+      "expression": "0 <= 2",
+      "messageExpression": "Invalid value",
+      "reason": "Unauthorized"
+    }
+  ]
+}
+`)
+	settings := Settings{}
+	err = json.Unmarshal(settingsString, &settings)
+	require.NoError(t, err)
+	require.Equal(t, settings, expectedsettings)
+}
+
+func TestParameterNotFoundValidationAfterSerialization(t *testing.T) {
+	settingsString := []byte(`
+{
+	"variables": [
+	{"name": "correct", "expression": "object"}
+	],
+  "paramKind": {
+    "APIVersion": "v1",
+    "Kind": "kind"
+  },
+  "paramRef": {
+    "Name": "name",
+    "Namespace": "namespace",
+    "ParameterNotFoundAction": "Other"
+  },
+  "validations": [
+    {
+      "expression": "0 <= 2",
+      "reason": "Unauthorized"
+    }
+  ]
+}
+`)
+	response, err := ValidateSettings(settingsString)
+	require.NoError(t, err)
+	settingsValidationResponse := protocol.SettingsValidationResponse{}
+	err = json.Unmarshal(response, &settingsValidationResponse)
+	require.NoError(t, err)
+
+	require.False(t, settingsValidationResponse.Valid)
+	require.NotNil(t, settingsValidationResponse.Message)
+	require.Contains(t, *settingsValidationResponse.Message, "parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified")
+}
+
+func TestFailurePolicySerialization(t *testing.T) {
+	settingsString := []byte(`
+	
+{
+	"variables": [
+	{"name": "correct", "expression": "object"}
+	],
+  "validations": [
+    {
+      "expression": "0 <= 2",
+      "messageExpression": "Invalid value",
+      "reason": "Unauthorized"
+    }
+  ]
+}
+`)
+	settings := Settings{}
+	err := json.Unmarshal(settingsString, &settings)
+	require.NoError(t, err)
+	require.Equal(t, settings.FailurePolicy, admissionregistration.Fail)
 }

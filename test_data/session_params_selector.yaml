@@ -1,0 +1,22 @@
+- type: Exchange
+  request: |
+    !KubernetesListResourceNamespace
+    api_version: v1
+    kind: ConfigMap
+    namespace: default
+    label_selector: app=my-app
+    field_selector: null
+  response:
+    type: Success
+    payload: '{"apiVersion":"v1","kind":"ConfigMapList","metadata":{},"items":[{"metadata":{"annotations":{},"creationTimestamp":"2025-09-19T17:16:17Z","labels":{"app":"my-app"},"managedFields":[],"name":"my-config","namespace":"default","resourceVersion":"1254","uid":"3c72df7e-8914-48fa-97b1-408e317baa20"},"data":{"maxreplicas":"40"}},{"metadata":{"annotations":{},"creationTimestamp":"2025-09-19T17:16:46Z","labels":{"app":"my-app"},"managedFields":[],"name":"my-config2","namespace":"default","resourceVersion":"1255","uid":"06ae6aad-646a-455d-91d1-38ec56ede35c"},"data":{"maxreplicas":"50"}}]}'
+- type: Exchange
+  request: |
+    !KubernetesGetResource
+    api_version: v1
+    kind: Namespace
+    name: default
+    namespace: null
+    disable_cache: false
+  response:
+    type: Success
+    payload: '{"apiVersion":"v1","kind":"Namespace","metadata":{"creationTimestamp":"2025-09-19T17:13:31Z","labels":{"kubernetes.io/metadata.name":"default"},"managedFields":[{"apiVersion":"v1","fieldsType":"FieldsV1","fieldsV1":{"f:metadata":{"f:labels":{".":{},"f:kubernetes.io/metadata.name":{}}}},"manager":"k3s","operation":"Update","time":"2025-09-19T17:13:31Z"}],"name":"default","resourceVersion":"39","uid":"e0206942-c002-455b-b0d9-1f1db2df8a7b"},"spec":{"finalizers":["kubernetes"]},"status":{"phase":"Active"}}'

@@ -45,5 +45,8 @@ clean:
 	rm -f policy.wasm annotated-policy.wasm
 
 .PHONY: e2e-tests
-e2e-tests: annotated-policy.wasm
+e2e-tests: 
+	# The policy annonation uses a different metadata file for testing because the 
+	# e2e tests require access to ConfigMap to test the parameters feature.
+	kwctl annotate -m test_data/metadata.yml -u README.md -o annotated-policy.wasm policy.wasm
 	bats e2e.bats

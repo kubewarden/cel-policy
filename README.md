@@ -21,6 +21,7 @@ The policy provides the following variables:
 - `object`: the Kubernetes resource being validated
 - `oldObject`: the Kubernetes resource before the update, nil if the request is not an update
 - `namespaceObject`: the namespace of the resource being validated
+- `params`: the parameters found when `paramKind` and `paramRef` is defined.
 
 The policy will be evaluated as `allowed` if all the CEL expressions are evaluated as `true`.
 It is required that the validations expression is a boolean, otherwise the policy will not pass the settings validation phase.
@@ -30,6 +31,41 @@ The `messageExpression` will be evaluated as a CEL expression, and the result wi
 It is required that the message expression is a string, otherwise the policy will not pass the settings validation phase.
 
 For more information about variables and validation expressions, please refer to the [ValidatingAdmissionPolicy Kubernetes resource](https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/).
+
+#### Parameters
+
+It's possible to configure the policy to read parameters from other resources
+available in the cluster, similar to how the native Kubernetes
+[ValidatingAdmissionPolicy](https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/#parameter-resources)
+works. This allows the values used for validation to be split from the policy's
+logic.
+
+The cel-policy uses two fields for this purpose: `paramKind` and `paramRef`.
+They function identically to their Kubernetes counterparts.
+
+- `paramKind`: Defines the kind of resource to be used as a parameter (e.g.,
+  `ConfigMap`).
+- `paramRef`: Specifies how to find the parameter resource(s). It can find
+  resources by name or by a labelSelector, but you cannot use both at the same
+  time.
+
+In standard Kubernetes policies, `paramKind` is defined in the
+ValidatingAdmissionPolicy resource, while `paramRef` is defined in the
+ValidatingAdmissionPolicyBinding. However, the cel-policy simplifies this by
+defining both fields directly within the policy settings, as there is no such
+separation.
+
+The `paramRef` field also contains a setting called `parameterNotFoundAction`,
+which controls the policy's behavior when a specified parameter resource cannot
+be found. If `parameterNotFoundAction` is set to `Deny`, the outcome then
+depends on the `failurePolicy` setting. To mirror the native Kubernetes
+behavior, the Kubewarden cel-policy also includes the `failurePolicy` field in
+its settings. The `failurePolicy` settins is optional. And, its default values
+is `Fail`.
+
+When `paramRef` matches multiple parameter resources, the incoming request is
+validated against each one. The policy will only return an acceptance response
+if the resource is valid against all found parameters.
 
 ### Example
 
@@ -42,6 +78,9 @@ metadata:
   name: "demo-policy.example.com"
 spec:
   failurePolicy: Fail
+  paramKind:
+    apiVersion: v1
+    kind: ConfigMap
   matchConstraints:
     resourceRules:
       - apiGroups: ["apps"]
@@ -54,6 +93,27 @@ spec:
   validations:
     - expression: "variables.replicas <= 5"
       message: "The number of replicas must be less than or equal to 5"
+```
+
+Let's consider the following example `ValidatingAdmissionPolicyBinding` with
+`paramRef`:
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "demo-policy-binding.example.com"
+spec:
+  policyName: "demo-policy.example.com"
+  validationActions: [Deny]
+  paramRef:
+    name: "my-params"
+    namespace: "default"
+    parameterNotFoundAction: Deny
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        environment: test
 ```
 
 the Kubewarden CEL policy can be written as follows:
@@ -69,6 +129,14 @@ metadata:
 spec:
   module: registry://ghcr.io/kubewarden/policies/cel-policy:latest
   settings:
+    failurePolicy: Fail # this settings is optional. When not defined, the default value is `Fail`
+    paramKind:
+      apiVersion: v1
+      kind: ConfigMap
+    paramRef:
+      name: "my-params"
+      namespace: "default"
+      parameterNotFoundAction: Deny
     variables:
       - name: "replicas"
         expression: "object.spec.replicas"
