@@ -10,7 +10,7 @@
 #  * Creates pull requests: When updates are available, it automatically creates a GitHub pull request with all the changes, properly labeled and with a descriptive commit message.
 
 # To work this Updatecli manifest requires the following environment variables to be set:
-#  * `UPDATECLI_GITHUB_OWNER`: The GitHub owner of the repository where the
+#  * `UPDATECLI_GITHUB_OWNER`: The GitHub owner of the repository where the files will be copy into
 #  * `UPDATECLI_GITHUB_TOKEN`: A GitHub token with write access to the repository.
 
 # And the following values to be set in `updatecli/values.yaml`:
