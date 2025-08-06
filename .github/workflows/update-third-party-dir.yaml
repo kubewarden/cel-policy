@@ -23,4 +23,4 @@ jobs:
         env:
           UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
-        run: "updatecli apply --debug --config ./updatecli/update_third_party_files.yaml --values /tmp/updatecli/values.yaml --values ./updatecli/values.yaml"
+        run: "updatecli compose apply -f updatecli/updatecli-compose.yaml"
