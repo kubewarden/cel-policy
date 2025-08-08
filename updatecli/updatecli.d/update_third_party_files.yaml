@@ -156,7 +156,7 @@ targets:
         - [kubernetes/apiserver](https://github.com/kubernetes/apiserver).
         - [kubernetes/apimachinery](https://github.com/kubernetes/apimachinery).
         
-        The current version is based on kubernetes v{{ source "apiServerVersion" }} (apiserver/apimachinery v{{ source "apiServerVersion" }}).
+        The current version is based on kubernetes v{{ source "apiServerVersion" }}).
         
         All code in this folder is licensed under the Apache License 2.0, see [LICENSE](LICENSE).
 
@@ -186,13 +186,15 @@ targets:
     sourceid: apiServerVersion
     spec:
       module: "k8s.io/apiserver"
+    transformers:
+      - addprefix: "v"
   updateGoReplacements:
     name: "Update go.mod replaces for k8s.io/apiserver and k8s.io/apimachinery packages"
     kind: shell
     scmid: "default"
     disablesourceinput: true
     spec:
-      command: 'go mod edit -replace=k8s.io/apiserver@{{ source "apiServerVersion" }}=./third_party/k8s.io/apiserver/ -replace=k8s.io/apimachinery@{{ source "apiServerVersion" }}=./third_party/k8s.io/apimachinery/'
+      command: 'go mod edit -replace=k8s.io/apiserver@v{{ source "apiServerVersion" }}=./third_party/k8s.io/apiserver/ -replace=k8s.io/apimachinery@v{{ source "apiServerVersion" }}=./third_party/k8s.io/apimachinery/'
       environments:
         - name: HOME
         - name: PATH
@@ -205,6 +207,7 @@ targets:
     dependson:
       - updateGoReplacements
     disablesourceinput: true
+    scmid: "default"
     kind: shell
     name: Run `go mod tidy`
     spec:
@@ -222,13 +225,13 @@ targets:
 actions:
   createUpdatePR:
     kind: "github/pullrequest"
-    title: "Update third_party directory with files from Kubernetes v{{ .apiServerVersion }}"
     scmid: "default"
     spec:
+      title: 'Update third_party directory with files from Kubernetes v{{ source "apiServerVersion" }}'
       automerge: false
       mergemethod: squash
       description: |
-        Automatic third_party directory update with the files from the Kubernetes v{{ .apiServerVersion }}.
+        Automatic third_party directory update with the files from the Kubernetes v{{ source "apiServerVersion" }}.
 
         REMEMBER IF YOU WANT TO MERGE IN A SINGLE COMMIT CHANGES AND VERSION BUMP, YOU MUST SQUASH THE COMMIT BEFORE MERGING THIS PR!
       draft: false
