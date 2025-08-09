@@ -19,14 +19,8 @@ jobs:
       - name: Install Updatecli in the runner
         uses: updatecli/updatecli-action@419b75cb4d4bd6b50b03da7b33e1e0065d383eaf # v2.89.0
 
-      - name: Fetch latest Kubernetes released version
-        env:
-          UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
-        run: "updatecli apply --debug --config ./updatecli/update_api_server_files.yaml"
-
       - name: Updates  third party directory files
         env:
           UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
-        run: "updatecli apply --debug --config ./updatecli/update_third_party_files.yaml --values /tmp/updatecli/values.yaml --values ./updatecli/values.yaml"
+        run: "updatecli compose apply -f updatecli/updatecli-compose.yaml"

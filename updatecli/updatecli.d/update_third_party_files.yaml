@@ -1,0 +1,241 @@
+# This Updatecli configuration automates the process of keeping third-party Kubernetes code synchronized with upstream repositories. Specifically, it:
+#
+#  * Monitors Kubernetes releases: It tracks the latest Kubernetes versions from the kubernetes/apiserver and kubernetes/apimachinery repositories on GitHub.
+#  * Downloads specific files: It automatically downloads certain files from these Kubernetes repositories based on the latest stable release (using semantic versioning with pattern <1 to get the latest 0.x versions).
+#  * Updates local third-party directory: The downloaded files are placed in the k8s.io directory structure, maintaining the same folder hierarchy as the upstream repositories.
+#  * Updates Go module dependencies: It automatically updates the go.mod file to:
+#  * Update the version of k8s.io/apiserver dependency
+#  * Add/update Go module replacements to use the local third-party copies instead of downloading from remote
+#  * Run go mod tidy to clean up dependencies
+#  * Creates pull requests: When updates are available, it automatically creates a GitHub pull request with all the changes, properly labeled and with a descriptive commit message.
+
+# To work this Updatecli manifest requires the following environment variables to be set:
+#  * `UPDATECLI_GITHUB_OWNER`: The GitHub owner of the repository where the files will be copy into
+#  * `UPDATECLI_GITHUB_TOKEN`: A GitHub token with write access to the repository.
+
+# And the following values to be set in `updatecli/values.yaml`:
+#  * `github.owner`: The GitHub owner of the repository where the third-party code
+#  * `github.token`: A GitHub token with write access to the repository.
+#  * `github.author`: The name of the author for the commit and pull request.
+#  * `github.email`: The email of the author for the commit and pull request.
+#  * `github.user`: The GitHub user to use for the commit and pull request
+#  * `monitoredApiServerFiles`: A list of files to monitor and update from the kubernetes/apiserver repository.
+#  * `monitoredApiMachineryFiles`: A list of files to monitor and update from the kubernetes/apimachinery repository.
+
+# Warning: 
+# Please note that this Updatecli saves all the monitored files in memory until the end of the run,
+# so it is not recommended to monitor a large number of files or large files.
+
+name: "Update the third party directory with files from Kubernetes repositories"
+
+scms:
+  default:
+    kind: github
+    spec:
+      hidecredit: true
+      user: "{{ .github.author }}"
+      email: "{{ .github.email }}"
+      owner: "{{ requiredEnv .github.owner }}"
+      repository: "cel-policy"
+      token: "{{ requiredEnv .github.token }}"
+      username: "{{ requiredEnv .github.user }}"
+      branch: "main"
+      commitmessage:
+        footers: "Signed-off-by: Kubewarden bot <cncf-kubewarden-maintainers@lists.cncf.io>"
+
+  apiServerGit:
+    kind: "git"
+    spec:
+      url: "https://github.com/kubernetes/apiserver.git"
+      branch: master
+
+  apiMachineryGit:
+    kind: "git"
+    spec:
+      url: "https://github.com/kubernetes/apimachinery.git"
+      branch: master
+
+sources:
+  apiServerVersion:
+    name: Get Latest apiserver tag
+    kind: gittag
+    scmid: apiServerGit
+    spec:
+      versionfilter:
+        kind: semver
+        pattern: <1
+    transformers:
+      - findsubmatch:
+          pattern: 'v\d*.(\d*.\d*)'
+          captureindex: 1
+      - addprefix: "1."
+
+  apiServerVersionNoMajor:
+    name: Get Latest apiserver release branch
+    kind: gittag
+    scmid: apiServerGit
+    spec:
+      versionfilter:
+        kind: semver
+        pattern: <1
+    transformers:
+      - findsubmatch:
+          pattern: 'v\d*.(\d*).\d*'
+          captureindex: 1
+      - addprefix: "release-1."
+
+  # {{ range $monitoredFile := .monitoredApiServerFiles }}
+  "apiserver/{{ $monitoredFile }}":
+    name: "Get {{ . }}"
+    kind: file
+    dependson:
+      # No need to read the files if the git branch does not exist
+      - "condition#latestApiServerBranch"
+      - "condition#latestApiServerTag"
+    spec:
+      file: 'https://raw.githubusercontent.com/kubernetes/apiserver/refs/heads/{{ source "apiServerVersionNoMajor" }}/{{ $monitoredFile }}'
+  # {{ end }}
+
+  # {{ range $monitoredFile := .monitoredApiMachineryFiles }}
+  "apimachinery/{{ $monitoredFile }}":
+    name: "Get {{ . }}"
+    kind: file
+    dependson:
+      # No need to read the files if the git branch does not exist
+      - "condition#latestApiMachineryBranch"
+      - "condition#latestApiMachineryTag"
+    spec:
+      file: 'https://raw.githubusercontent.com/kubernetes/apimachinery/refs/heads/{{ source "apiServerVersionNoMajor" }}/{{ $monitoredFile }}'
+  # {{ end }}
+
+conditions:
+  latestApiServerTag:
+    name: Check that the latest kubernetes tag exist in API Server
+    kind: gittag
+    sourceid: apiServerVersion
+    scmid: apiServerGit
+    transformers:
+      - addprefix: "kubernetes-"
+
+  latestApiServerBranch:
+    name: Check that the latest kubernetes branch exist in API Server
+    kind: gitbranch
+    sourceid: apiServerVersion
+    scmid: apiServerGit
+    transformers:
+      - findsubmatch:
+          pattern: '\d*.(\d*).\d*'
+          captureindex: 1
+      - addprefix: "release-1."
+
+  latestApiMachineryTag:
+    name: Check that the latest kubernetes tag exist in API Machinery
+    kind: gittag
+    sourceid: apiServerVersion
+    scmid: apiMachineryGit
+    transformers:
+      - addprefix: "kubernetes-"
+
+  latestApiMachineryBranch:
+    name: Check that the latest kubernetes branch exist in API Machinery
+    kind: gitbranch
+    sourceid: apiServerVersionNoMajor
+    scmid: apiMachineryGit
+
+targets:
+  readmeUpdate:
+    name: "Update third party directory README file"
+    kind: "file"
+    disablesourceinput: true
+    scmid: "default"
+    spec:
+      file: "./third_party/README.md"
+      content: |
+        This folder contains third-party code from kubernetes:
+        
+        - [kubernetes/apiserver](https://github.com/kubernetes/apiserver).
+        - [kubernetes/apimachinery](https://github.com/kubernetes/apimachinery).
+        
+        The current version is based on kubernetes v{{ source "apiServerVersion" }}).
+        
+        All code in this folder is licensed under the Apache License 2.0, see [LICENSE](LICENSE).
+
+# {{ range $monitoredFile := .monitoredApiServerFiles }}
+  "apiserver/{{ $monitoredFile }}":
+    name: "update {{ $monitoredFile }}"
+    kind: file
+    scmid: "default"
+    sourceid: "apiserver/{{ $monitoredFile }}"
+    spec:
+      file: 'third_party/k8s.io/apiserver/{{ $monitoredFile }}'
+# {{ end }}
+# {{ range $monitoredFile := .monitoredApiMachineryFiles }}
+  "apimachinery/{{ $monitoredFile }}":
+    name: "update {{ $monitoredFile }}"
+    kind: file
+    scmid: "default"
+    sourceid: "apimachinery/{{ $monitoredFile }}"
+    spec:
+      file: 'third_party/k8s.io/apimachinery/{{ $monitoredFile }}'
+# {{ end }}
+
+  updateApiServerVersion:
+    name: Update apiserver version in use
+    kind: golang/gomod
+    scmid: default
+    sourceid: apiServerVersion
+    spec:
+      module: "k8s.io/apiserver"
+    transformers:
+      - addprefix: "v"
+  updateGoReplacements:
+    name: "Update go.mod replaces for k8s.io/apiserver and k8s.io/apimachinery packages"
+    kind: shell
+    scmid: "default"
+    disablesourceinput: true
+    spec:
+      command: 'go mod edit -replace=k8s.io/apiserver@v{{ source "apiServerVersion" }}=./third_party/k8s.io/apiserver/ -replace=k8s.io/apimachinery@v{{ source "apiServerVersion" }}=./third_party/k8s.io/apimachinery/'
+      environments:
+        - name: HOME
+        - name: PATH
+      changedif:
+        kind: file/checksum
+        spec:
+          files:
+            - go.mod
+  goModTidy:
+    dependson:
+      - updateGoReplacements
+    disablesourceinput: true
+    scmid: "default"
+    kind: shell
+    name: Run `go mod tidy`
+    spec:
+      changedif:
+        kind: file/checksum
+        spec:
+          files:
+            - go.mod
+            - go.sum
+      command: go mod tidy
+      environments:
+        - name: HOME
+        - name: PATH
+
+actions:
+  createUpdatePR:
+    kind: "github/pullrequest"
+    scmid: "default"
+    spec:
+      title: 'Update third_party directory with files from Kubernetes v{{ source "apiServerVersion" }}'
+      automerge: false
+      mergemethod: squash
+      description: |
+        Automatic third_party directory update with the files from the Kubernetes v{{ source "apiServerVersion" }}.
+
+        REMEMBER IF YOU WANT TO MERGE IN A SINGLE COMMIT CHANGES AND VERSION BUMP, YOU MUST SQUASH THE COMMIT BEFORE MERGING THIS PR!
+      draft: false
+      maintainercanmodify: true
+      labels:
+        - "kind/chore"
+        - "area/dependencies"
