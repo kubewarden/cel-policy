@@ -4,3 +4,25 @@ github:
   author: "Kubewarden bot"
   email: "cncf-kubewarden-maintainers@lists.cncf.io"
   user: "UPDATECLI_GITHUB_OWNER"
+
+monitoredApiServerFiles:
+  - "pkg/apis/cel/config.go"
+  - "pkg/cel/escaping.go"
+  - "pkg/cel/OWNERS"
+  - "pkg/cel/errors.go"
+  - "pkg/cel/library/lists.go"
+  - "pkg/cel/library/regex.go"
+  - "pkg/cel/library/test.go"
+  - "pkg/cel/library/urls.go"
+  - "pkg/cel/limits.go"
+  - "pkg/cel/quantity.go"
+  - "pkg/cel/types.go"
+  - "pkg/cel/url.go"
+  - "pkg/cel/value.go"
+
+monitoredApiMachineryFiles:
+  - "pkg/api/resource/amount.go"
+  - "pkg/api/resource/quantity.go"
+  - "pkg/api/resource/math.go"
+  - "pkg/api/resource/scale_int.go"
+  - "pkg/api/resource/suffix.go"

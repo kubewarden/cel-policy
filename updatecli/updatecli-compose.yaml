@@ -1,0 +1,6 @@
+policies:
+  - name: Sync Kubernetes third party files
+    config:
+      - ./updatecli.d/update_third_party_files.yaml
+    values:
+      - ./values.yaml
