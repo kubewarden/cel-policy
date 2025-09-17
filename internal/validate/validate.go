@@ -86,17 +86,10 @@ func Validate(payload []byte) ([]byte, error) {
 			return types.NullValue
 		},
 		"params": func() ref.Val {
-			name := validationRequest.Settings.ParamRef.Name
-			namespace := validationRequest.Settings.ParamRef.Namespace
-			if name == "" {
-				namespace = requestMap["namespace"].(string)
+			if validationRequest.Settings.ParamRef.Selector != nil {
+				return getParamsBySelector(validationRequest, requestMap)
 			}
-			apiVersion := validationRequest.Settings.ParamKind.APIVersion
-			kind := validationRequest.Settings.ParamKind.Kind
-			if name != "" {
-				return getKubernetesResource(name, namespace, apiVersion, kind)
-			}
-			return types.NullValue
+			return getParamsByName(validationRequest, requestMap)
 		},
 	}
 
@@ -105,6 +98,27 @@ func Validate(payload []byte) ([]byte, error) {
 	}
 
 	return evalValidations(compiler, vars, validationRequest.Settings.Validations)
+}
+
+func getResourceInfo(validationRequest ValidationRequest, requestMap map[string]any) (string, string, string) {
+	namespace := validationRequest.Settings.ParamRef.Namespace
+	if namespace == "" {
+		namespace = requestMap["namespace"].(string)
+	}
+	apiVersion := validationRequest.Settings.ParamKind.APIVersion
+	kind := validationRequest.Settings.ParamKind.Kind
+	return namespace, apiVersion, kind
+}
+
+func getParamsByName(validationRequest ValidationRequest, requestMap map[string]any) ref.Val {
+	name := validationRequest.Settings.ParamRef.Name
+	namespace, apiVersion, kind := getResourceInfo(validationRequest, requestMap)
+	return getKubernetesResource(name, namespace, apiVersion, kind)
+}
+
+func getParamsBySelector(validationRequest ValidationRequest, requestMap map[string]any) ref.Val {
+	namespace, apiVersion, kind := getResourceInfo(validationRequest, requestMap)
+	return getKubernetesResourceList(namespace, apiVersion, kind)
 }
 
 func evalVariables(compiler *cel.Compiler, vars map[string]interface{}, variables []settings.Variable) error {

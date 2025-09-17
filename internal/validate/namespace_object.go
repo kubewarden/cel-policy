@@ -56,3 +56,23 @@ func getKubernetesResource(name string, namespace string, apiVersion string, kin
 
 	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
 }
+
+func getKubernetesResourceList(namespace string, apiVersion string, kind string) ref.Val {
+	resourceRequest := kubernetes.ListResourcesByNamespaceRequest{
+		APIVersion: apiVersion,
+		Kind:       kind,
+		Namespace:  namespace,
+	}
+
+	responseBytes, err := kubernetes.ListResourcesByNamespace(&host, resourceRequest)
+	if err != nil {
+		return types.NewErr("cannot list Kubernetes resources: %s", err)
+	}
+
+	var response []any
+	if err = json.Unmarshal(responseBytes, &response); err != nil {
+		return types.NewErr("cannot unmarshal Kubernetes resource response: %s", err)
+	}
+
+	return types.NewDynamicList(types.DefaultTypeAdapter, response)
+}
