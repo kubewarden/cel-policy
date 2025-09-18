@@ -2,7 +2,6 @@ package settings
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -237,6 +236,30 @@ func TestValidateSettings(t *testing.T) {
 			},
 			expectedError: `paramRef cannot have both Name and Selector specified`,
 		},
+		{
+			name: "ParamRef must define a valid ParameterNotFoundAction",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Name: "my-config",
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified`,
+		},
 	}
 
 	for _, test := range tests {
@@ -258,7 +281,8 @@ func TestValidateSettings(t *testing.T) {
 }
 
 func TestSerialization(t *testing.T) {
-	settings := Settings{
+	action := admissionregistration.DenyAction
+	expectedsettings := Settings{
 		Variables: []Variable{
 			{
 				Name:       "correct",
@@ -267,26 +291,33 @@ func TestSerialization(t *testing.T) {
 		},
 		ParamKind: &admissionregistration.ParamKind{
 			APIVersion: "v1",
+			Kind:       "kind",
 		},
 		ParamRef: &admissionregistration.ParamRef{
-			Name: "",
+			Name:                    "name",
+			Namespace:               "namespace",
+			Selector:                nil,
+			ParameterNotFoundAction: &action,
 		},
 		Validations: []Validation{
 			{
-				Expression: "0 > 1",
+				Expression:        "0 <= 2",
+				MessageExpression: "Invalid value",
+				Reason:            "Unauthorized",
 			},
 		},
 	}
-	serialized, err := json.Marshal(settings)
+	_, err := json.Marshal(expectedsettings)
 	require.NoError(t, err)
-	fmt.Println(string(serialized))
-	serialized, err = yaml.Marshal(settings)
+	_, err = yaml.Marshal(expectedsettings)
 	require.NoError(t, err)
-	fmt.Println(string(serialized))
 
 	settingsString := []byte(`
 	
 {
+	"variables": [
+	{"name": "correct", "expression": "object"}
+	],
   "paramKind": {
     "APIVersion": "v1",
     "Kind": "kind"
@@ -295,7 +326,7 @@ func TestSerialization(t *testing.T) {
     "Name": "name",
     "Namespace": "namespace",
     "Selector": null,
-    "ParameterNotFoundAction": null
+    "ParameterNotFoundAction": "Deny"
   },
   "validations": [
     {
@@ -306,9 +337,43 @@ func TestSerialization(t *testing.T) {
   ]
 }
 `)
-	settings = Settings{}
+	settings := Settings{}
 	err = json.Unmarshal(settingsString, &settings)
 	require.NoError(t, err)
-	fmt.Printf("%+v\n", settings.ParamKind)
-	fmt.Printf("%+v\n", settings.ParamRef)
+	require.Equal(t, settings, expectedsettings)
+}
+
+func TestParameterNotFoundValidationAfterSerialization(t *testing.T) {
+	settingsString := []byte(`
+{
+	"variables": [
+	{"name": "correct", "expression": "object"}
+	],
+  "paramKind": {
+    "APIVersion": "v1",
+    "Kind": "kind"
+  },
+  "paramRef": {
+    "Name": "name",
+    "Namespace": "namespace",
+    "Selector": null,
+    "ParameterNotFoundAction": "Other"
+  },
+  "validations": [
+    {
+      "expression": "0 <= 2",
+      "reason": "Unauthorized"
+    }
+  ]
+}
+`)
+	response, err := ValidateSettings(settingsString)
+	require.NoError(t, err)
+	settingsValidationResponse := protocol.SettingsValidationResponse{}
+	err = json.Unmarshal(response, &settingsValidationResponse)
+	require.NoError(t, err)
+
+	require.False(t, settingsValidationResponse.Valid)
+	require.NotNil(t, settingsValidationResponse.Message)
+	require.Contains(t, *settingsValidationResponse.Message, "parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified")
 }

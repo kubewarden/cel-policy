@@ -139,6 +139,16 @@ func validateParams(settings Settings) error {
 	if settings.ParamRef != nil && (settings.ParamRef.Name != "" && settings.ParamRef.Selector != nil) {
 		return newInvalidValueError("paramRef", settings.ParamRef.Name, "paramRef cannot have both Name and Selector specified")
 	}
+	if settings.ParamRef != nil {
+		if settings.ParamRef.ParameterNotFoundAction == nil ||
+			(settings.ParamRef.ParameterNotFoundAction != nil && *settings.ParamRef.ParameterNotFoundAction != admissionregistration.AllowAction && *settings.ParamRef.ParameterNotFoundAction != admissionregistration.DenyAction) {
+			parameterNotFoundAction := "nil"
+			if settings.ParamRef.ParameterNotFoundAction != nil {
+				parameterNotFoundAction = string(*settings.ParamRef.ParameterNotFoundAction)
+			}
+			return newInvalidValueError("paramRef", parameterNotFoundAction, "parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified")
+		}
+	}
 	return nil
 }
 
