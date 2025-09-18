@@ -80,6 +80,23 @@ func TestValidateSettings(t *testing.T) {
 			expectedError: `variables[0].name: Required value: name is not specified`,
 		},
 		{
+			name: "variable name cannot be 'params'",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "params",
+						Expression: "true",
+					},
+				},
+				Validations: []Validation{
+					{
+						Expression: "true",
+					},
+				},
+			},
+			expectedError: `'params' name is not allowed. It can conflicts with the 'params' from the policy paramaters configuration`,
+		},
+		{
 			name: "variable composition name is not a valid identifier",
 			settings: Settings{
 				Variables: []Variable{

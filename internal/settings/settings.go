@@ -155,12 +155,17 @@ func validateParams(settings Settings) error {
 func validateVariable(compiler *cel.Compiler, index int, variable Variable) (*types.Type, error) {
 	var result error
 
-	if len(variable.Name) == 0 || strings.TrimSpace(variable.Name) == "" {
+	name := strings.TrimSpace(variable.Name)
+	if len(name) == 0 {
 		err := newRequiredValueError(fmt.Sprintf("variables[%d].name", index), "name is not specified")
 		result = multierror.Append(result, err)
 	} else if !cel.IsCELIdentifier(variable.Name) {
 		err := newInvalidValueError(fmt.Sprintf("variables[%d].name", index), variable.Name, "name is not a valid CEL identifier")
 		result = multierror.Append(result, err)
+	} else if name == "params" {
+		err := newInvalidValueError(fmt.Sprintf("variables[%d].name", index), variable.Name, "'params' name is not allowed. It can conflicts with the 'params' from the policy paramaters configuration")
+		result = multierror.Append(result, err)
+
 	}
 
 	var variableType *types.Type
