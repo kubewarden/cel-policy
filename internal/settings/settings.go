@@ -31,10 +31,13 @@ var supportedValidationPolicyReason = []string{
 
 // Settings defines the settings of the policy.
 type Settings struct {
-	Variables   []Variable                       `json:"variables"`
-	Validations []Validation                     `json:"validations"`
-	ParamKind   *admissionregistration.ParamKind `json:"paramKind,omitempty"`
-	ParamRef    *admissionregistration.ParamRef  `json:"paramRef,omitempty"`
+	Variables   []Variable   `json:"variables"`
+	Validations []Validation `json:"validations"`
+	/// FailurePolicy defines how the policy will response to  runtime errors and
+	//invalid or mis-configured policy definitions
+	FailurePolicy admissionregistration.FailurePolicyType `json:"failurePolicy,omitempty"`
+	ParamKind     *admissionregistration.ParamKind        `json:"paramKind,omitempty"`
+	ParamRef      *admissionregistration.ParamRef         `json:"paramRef,omitempty"`
 }
 
 type Variable struct {
@@ -47,6 +50,27 @@ type Validation struct {
 	Message           string `json:"message"`
 	MessageExpression string `json:"messageExpression"`
 	Reason            string `json:"reason"`
+}
+
+// Write a custom unmarshaller to set default values for FailurePolicy to replicate
+// Kubernetes behavior
+func (s *Settings) UnmarshalJSON(data []byte) error {
+	type Alias Settings
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(s),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	if s.FailurePolicy == "" {
+		s.FailurePolicy = admissionregistration.Fail
+	}
+
+	return nil
 }
 
 func (v *Validation) UnmarshalJSON(data []byte) error {
@@ -86,6 +110,11 @@ func ValidateSettings(input []byte) ([]byte, error) {
 
 	if len(settings.Validations) == 0 {
 		err := newRequiredValueError("validations", "validations must contain at least one item")
+		result = multierror.Append(result, err)
+	}
+
+	if settings.FailurePolicy != admissionregistration.Ignore && settings.FailurePolicy != admissionregistration.Fail {
+		err := newRequiredValueError("failurePolicy", "failurePolicy must be either 'Ignore' or 'Fail'")
 		result = multierror.Append(result, err)
 	}
 

@@ -277,6 +277,24 @@ func TestValidateSettings(t *testing.T) {
 			},
 			expectedError: `parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified`,
 		},
+		{
+			name: "failurePolicy allow values",
+			settings: Settings{
+				FailurePolicy: "Other",
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `failurePolicy must be either 'Ignore' or 'Fail'`,
+		},
 	}
 
 	for _, test := range tests {
@@ -300,6 +318,7 @@ func TestValidateSettings(t *testing.T) {
 func TestSerialization(t *testing.T) {
 	action := admissionregistration.DenyAction
 	expectedsettings := Settings{
+		FailurePolicy: admissionregistration.Ignore,
 		Variables: []Variable{
 			{
 				Name:       "correct",
@@ -336,6 +355,7 @@ func TestSerialization(t *testing.T) {
 	settingsString := []byte(`
 	
 {
+	"failurePolicy": "Ignore",
 	"variables": [
 	{"name": "correct", "expression": "object"}
 	],
@@ -396,4 +416,26 @@ func TestParameterNotFoundValidationAfterSerialization(t *testing.T) {
 	require.False(t, settingsValidationResponse.Valid)
 	require.NotNil(t, settingsValidationResponse.Message)
 	require.Contains(t, *settingsValidationResponse.Message, "parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified")
+}
+
+func TestFailurePolicySerialization(t *testing.T) {
+	settingsString := []byte(`
+	
+{
+	"variables": [
+	{"name": "correct", "expression": "object"}
+	],
+  "validations": [
+    {
+      "expression": "0 <= 2",
+      "messageExpression": "Invalid value",
+      "reason": "Unauthorized"
+    }
+  ]
+}
+`)
+	settings := Settings{}
+	err := json.Unmarshal(settingsString, &settings)
+	require.NoError(t, err)
+	require.Equal(t, settings.FailurePolicy, admissionregistration.Fail)
 }

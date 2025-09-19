@@ -41,7 +41,7 @@ func getNamespaceObject(name string) ref.Val {
 	return types.NewDynamicMap(types.DefaultTypeAdapter, namespaceObjectData)
 }
 
-func getKubernetesResource(name string, namespace string, apiVersion string, kind string) ref.Val {
+func getKubernetesResource(name string, namespace string, apiVersion string, kind string) (any, error) {
 	resourceRequest := kubernetes.GetResourceRequest{
 		APIVersion: apiVersion,
 		Kind:       kind,
@@ -51,15 +51,15 @@ func getKubernetesResource(name string, namespace string, apiVersion string, kin
 
 	responseBytes, err := kubernetes.GetResource(&host, resourceRequest)
 	if err != nil {
-		return types.NewErr("cannot get Kubernetes resource: %s", err)
+		return nil, fmt.Errorf("cannot get Kubernetes resource: %s", err)
 	}
 
 	var response map[string]any
 	if err = json.Unmarshal(responseBytes, &response); err != nil {
-		return types.NewErr("cannot unmarshal Kubernetes resource response: %s", err)
+		return nil, fmt.Errorf("cannot unmarshal Kubernetes resource response: %s", err)
 	}
 
-	return types.NewDynamicMap(types.DefaultTypeAdapter, response)
+	return response, nil
 }
 
 // This function is used by the policy to get the params using selector
