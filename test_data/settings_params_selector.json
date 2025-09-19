@@ -18,7 +18,11 @@
     "Kind": "ConfigMap"
   },
   "paramRef": {
-    "Name": "my-config",
+    "Selector": {
+      "matchLabels": {
+        "app": "my-app"
+      }
+    },
     "Namespace": "default",
     "ParameterNotFoundAction": "Deny"
   },

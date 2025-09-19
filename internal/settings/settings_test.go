@@ -311,9 +311,13 @@ func TestSerialization(t *testing.T) {
 			Kind:       "kind",
 		},
 		ParamRef: &admissionregistration.ParamRef{
-			Name:                    "name",
-			Namespace:               "namespace",
-			Selector:                nil,
+			Name:      "name",
+			Namespace: "namespace",
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "my-app",
+				},
+			},
 			ParameterNotFoundAction: &action,
 		},
 		Validations: []Validation{
@@ -342,7 +346,7 @@ func TestSerialization(t *testing.T) {
   "paramRef": {
     "Name": "name",
     "Namespace": "namespace",
-    "Selector": null,
+  	"Selector": {"matchLabels":{"app":"my-app"}},
     "ParameterNotFoundAction": "Deny"
   },
   "validations": [
@@ -373,7 +377,6 @@ func TestParameterNotFoundValidationAfterSerialization(t *testing.T) {
   "paramRef": {
     "Name": "name",
     "Namespace": "namespace",
-    "Selector": null,
     "ParameterNotFoundAction": "Other"
   },
   "validations": [

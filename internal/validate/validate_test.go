@@ -12,6 +12,8 @@ import (
 	kubewardenProtocol "github.com/kubewarden/policy-sdk-go/protocol"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubernetes/pkg/apis/admissionregistration"
 )
 
 func TestValidate(t *testing.T) {
@@ -237,6 +239,100 @@ func TestValidate(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, test.expectedValidationResponse, validationResponse)
+		})
+	}
+}
+
+func TestLabelSelectorParsing(t *testing.T) {
+	labelSelector := k8smetav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "my-app",
+		},
+		MatchExpressions: []k8smetav1.LabelSelectorRequirement{
+			{
+				Key:      "environment",
+				Operator: k8smetav1.LabelSelectorOpIn,
+				Values:   []string{"production", "staging"},
+			},
+			{
+				Key:      "phase",
+				Operator: k8smetav1.LabelSelectorOpNotIn,
+				Values:   []string{"initial", "final"},
+			},
+			{
+				Key:      "foo",
+				Operator: k8smetav1.LabelSelectorOpExists,
+				Values:   []string{},
+			},
+			{
+				Key:      "bar",
+				Operator: k8smetav1.LabelSelectorOpDoesNotExist,
+				Values:   []string{},
+			},
+		},
+	}
+
+	labelSelectorString, err := formatLabelSelectorString(&labelSelector)
+	require.NoError(t, err)
+	require.Equal(t, "app=my-app,!bar,environment in (production,staging),foo,phase notin (final,initial)", labelSelectorString)
+}
+
+func TestPerNamespaceParameter(t *testing.T) {
+	tests := []struct {
+		name       string
+		settings   settings.Settings
+		requestMap map[string]any
+		namespace  string
+		apiVersion string
+		kind       string
+	}{
+		{
+			name: "paramref with no namspace should use request namespace",
+			settings: settings.Settings{
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Namespace: "",
+				},
+			},
+			requestMap: map[string]any{
+				"namespace": "default",
+			},
+			namespace:  "default",
+			apiVersion: "v1",
+			kind:       "ConfigMap",
+		},
+		{
+			name: "paramref with namspace should use it instead of request namespace",
+			settings: settings.Settings{
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Namespace: "config",
+				},
+			},
+			requestMap: map[string]any{
+				"namespace": "default",
+			},
+			namespace:  "config",
+			apiVersion: "v1",
+			kind:       "ConfigMap",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			validationRequest := ValidationRequest{
+				Settings: test.settings,
+			}
+			namespace, apiVersion, kind := getResourceInfo(validationRequest, test.requestMap)
+			require.Equal(t, test.namespace, namespace)
+			require.Equal(t, test.apiVersion, apiVersion)
+			require.Equal(t, test.kind, kind)
 		})
 	}
 }
