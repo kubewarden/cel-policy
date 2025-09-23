@@ -50,19 +50,24 @@ func getKubernetesResource(name string, namespace string, apiVersion string, kin
 	}
 	responseBytes, err := kubernetes.GetResource(&host, resourceRequest)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get Kubernetes resource: %s", err)
+		return nil, fmt.Errorf("cannot get Kubernetes resource: %w", err)
 	}
 
 	var response map[string]any
 	if err = json.Unmarshal(responseBytes, &response); err != nil {
-		return nil, fmt.Errorf("cannot unmarshal Kubernetes resource response: %s", err)
+		return nil, fmt.Errorf("cannot unmarshal Kubernetes resource response: %w", err)
 	}
 
 	return response, nil
 }
 
-// This function is used by the policy to get the params using selector
-func getKubernetesResourceList(namespace string, apiVersion string, kind string, selector *metav1.LabelSelector) ([]any, error) {
+// This function is used by the policy to get the params using selector.
+func getKubernetesResourceList(
+	namespace string,
+	apiVersion string,
+	kind string,
+	selector *metav1.LabelSelector,
+) ([]any, error) {
 	labelSelectorString, err := formatLabelSelectorString(selector)
 	if err != nil {
 		return nil, err
@@ -76,16 +81,16 @@ func getKubernetesResourceList(namespace string, apiVersion string, kind string,
 
 	responseBytes, err := kubernetes.ListResourcesByNamespace(&host, resourceRequest)
 	if err != nil {
-		return nil, fmt.Errorf("cannot list Kubernetes resources: %s", err)
+		return nil, fmt.Errorf("cannot list Kubernetes resources: %w", err)
 	}
 
 	var response map[string]any
 	if err = json.Unmarshal(responseBytes, &response); err != nil {
-		return nil, fmt.Errorf("cannot unmarshal Kubernetes list resources response: %s", err)
+		return nil, fmt.Errorf("cannot unmarshal Kubernetes list resources response: %w", err)
 	}
 	items, ok := response["items"].([]any)
 	if !ok {
-		return nil, fmt.Errorf("cannot unmarshal Kubernetes list resources response: %s", err)
+		return nil, fmt.Errorf("cannot unmarshal Kubernetes list resources response: %w", err)
 	}
 	return items, nil
 }

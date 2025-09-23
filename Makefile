@@ -5,7 +5,7 @@ BIN_DIR := $(abspath $(ROOT_DIR)/bin)
 SOURCE_FILES := $(shell find . -type f -name '*.go')
 VERSION ?= $(shell git describe | cut -c2-)
 
-GOLANGCI_LINT_VER := v2.1.6
+GOLANGCI_LINT_VER := v2.5.0
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(BIN_DIR)/$(GOLANGCI_LINT_BIN)
 

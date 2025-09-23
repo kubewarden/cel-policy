@@ -34,7 +34,7 @@ type Settings struct {
 	Variables   []Variable   `json:"variables"`
 	Validations []Validation `json:"validations"`
 	/// FailurePolicy defines how the policy will response to  runtime errors and
-	//invalid or mis-configured policy definitions
+	// invalid or mis-configured policy definitions
 	FailurePolicy admissionregistration.FailurePolicyType `json:"failurePolicy,omitempty"`
 	ParamKind     *admissionregistration.ParamKind        `json:"paramKind,omitempty"`
 	ParamRef      *admissionregistration.ParamRef         `json:"paramRef,omitempty"`
@@ -53,7 +53,7 @@ type Validation struct {
 }
 
 // Write a custom unmarshaller to set default values for FailurePolicy to replicate
-// Kubernetes behavior
+// Kubernetes behavior.
 func (s *Settings) UnmarshalJSON(data []byte) error {
 	type Alias Settings
 	aux := &struct {
@@ -192,16 +192,16 @@ func validateVariable(compiler *cel.Compiler, index int, variable Variable) (*ty
 	var result error
 
 	name := strings.TrimSpace(variable.Name)
-	if len(name) == 0 {
+	switch {
+	case len(name) == 0:
 		err := newRequiredValueError(fmt.Sprintf("variables[%d].name", index), "name is not specified")
 		result = multierror.Append(result, err)
-	} else if !cel.IsCELIdentifier(variable.Name) {
+	case !cel.IsCELIdentifier(variable.Name):
 		err := newInvalidValueError(fmt.Sprintf("variables[%d].name", index), variable.Name, "name is not a valid CEL identifier")
 		result = multierror.Append(result, err)
-	} else if name == "params" {
+	case name == "params":
 		err := newInvalidValueError(fmt.Sprintf("variables[%d].name", index), variable.Name, "'params' name is not allowed. It can conflicts with the 'params' from the policy paramaters configuration")
 		result = multierror.Append(result, err)
-
 	}
 
 	var variableType *types.Type

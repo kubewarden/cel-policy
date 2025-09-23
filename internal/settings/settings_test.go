@@ -349,6 +349,7 @@ func TestSerialization(t *testing.T) {
 	}
 	_, err := json.Marshal(expectedsettings)
 	require.NoError(t, err)
+	//nolint:musttag // no need to validate this on tests
 	_, err = yaml.Marshal(expectedsettings)
 	require.NoError(t, err)
 
@@ -437,5 +438,5 @@ func TestFailurePolicySerialization(t *testing.T) {
 	settings := Settings{}
 	err := json.Unmarshal(settingsString, &settings)
 	require.NoError(t, err)
-	require.Equal(t, settings.FailurePolicy, admissionregistration.Fail)
+	require.Equal(t, admissionregistration.Fail, settings.FailurePolicy)
 }
