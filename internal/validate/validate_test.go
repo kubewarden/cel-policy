@@ -2,6 +2,7 @@ package validate
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -577,7 +578,7 @@ func TestParamFetchBehaviour(t *testing.T) {
 
 			var listResponseError error
 			if test.failedHostCall {
-				listResponseError = fmt.Errorf("Host call failed")
+				listResponseError = errors.New("Host call failed")
 				listResponse = nil
 			}
 

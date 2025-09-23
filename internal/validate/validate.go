@@ -141,7 +141,7 @@ func evalValidationAgaistParamsList(compiler *cel.Compiler, vars map[string]any,
 		for _, validation := range validationRequest.Settings.Validations {
 			message, reason, err := evaluateValidation(compiler, vars, validation)
 			if err != nil {
-				return nil, errors.Join(fmt.Errorf("failed to evaluate validation"), err)
+				return nil, errors.Join(errors.New("failed to evaluate validation"), err)
 			}
 			if message != "" {
 				return kubewarden.RejectRequest(message, reason)
@@ -184,7 +184,7 @@ func getEvaluationParams(validationRequest ValidationRequest, requestMap map[str
 func getResourceInfo(validationRequest ValidationRequest, requestMap map[string]any) (string, string, string) {
 	namespace := validationRequest.Settings.ParamRef.Namespace
 	if namespace == "" {
-		namespace = requestMap["namespace"].(string)
+		namespace, _ = requestMap["namespace"].(string)
 	}
 	apiVersion := validationRequest.Settings.ParamKind.APIVersion
 	kind := validationRequest.Settings.ParamKind.Kind
