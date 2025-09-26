@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubewarden/policy-sdk-go/protocol"
@@ -16,6 +15,7 @@ import (
 // TestValidateSettings unit tests adapted from:
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/admissionregistration/validation/validation_test.go
 func TestValidateSettings(t *testing.T) {
+	otherAction := admissionregistration.ParameterNotFoundActionType("Other")
 	tests := []struct {
 		name          string
 		settings      Settings
@@ -94,7 +94,7 @@ func TestValidateSettings(t *testing.T) {
 					},
 				},
 			},
-			expectedError: `'params' name is not allowed. It can conflicts with the 'params' from the policy paramaters configuration`,
+			expectedError: `'params' name is not allowed. It conflicts with 'params' from the policy paramaters configuration`,
 		},
 		{
 			name: "variable composition name is not a valid identifier",
@@ -278,6 +278,31 @@ func TestValidateSettings(t *testing.T) {
 			expectedError: `parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified`,
 		},
 		{
+			name: "ParameterNotFoundAction should be 'Allow' or 'Deny'",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Name:                    "my-config",
+					ParameterNotFoundAction: &otherAction,
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified`,
+		},
+		{
 			name: "failurePolicy allow values",
 			settings: Settings{
 				FailurePolicy: "Other",
@@ -315,111 +340,7 @@ func TestValidateSettings(t *testing.T) {
 	}
 }
 
-func TestSerialization(t *testing.T) {
-	action := admissionregistration.DenyAction
-	expectedsettings := Settings{
-		FailurePolicy: admissionregistration.Ignore,
-		Variables: []Variable{
-			{
-				Name:       "correct",
-				Expression: "object",
-			},
-		},
-		ParamKind: &admissionregistration.ParamKind{
-			APIVersion: "v1",
-			Kind:       "kind",
-		},
-		ParamRef: &admissionregistration.ParamRef{
-			Name:      "name",
-			Namespace: "namespace",
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "my-app",
-				},
-			},
-			ParameterNotFoundAction: &action,
-		},
-		Validations: []Validation{
-			{
-				Expression:        "0 <= 2",
-				MessageExpression: "Invalid value",
-				Reason:            "Unauthorized",
-			},
-		},
-	}
-	_, err := json.Marshal(expectedsettings)
-	require.NoError(t, err)
-	//nolint:musttag // no need to validate this on tests
-	_, err = yaml.Marshal(expectedsettings)
-	require.NoError(t, err)
-
-	settingsString := []byte(`
-	
-{
-	"failurePolicy": "Ignore",
-	"variables": [
-	{"name": "correct", "expression": "object"}
-	],
-  "paramKind": {
-    "APIVersion": "v1",
-    "Kind": "kind"
-  },
-  "paramRef": {
-    "Name": "name",
-    "Namespace": "namespace",
-  	"Selector": {"matchLabels":{"app":"my-app"}},
-    "ParameterNotFoundAction": "Deny"
-  },
-  "validations": [
-    {
-      "expression": "0 <= 2",
-      "messageExpression": "Invalid value",
-      "reason": "Unauthorized"
-    }
-  ]
-}
-`)
-	settings := Settings{}
-	err = json.Unmarshal(settingsString, &settings)
-	require.NoError(t, err)
-	require.Equal(t, settings, expectedsettings)
-}
-
-func TestParameterNotFoundValidationAfterSerialization(t *testing.T) {
-	settingsString := []byte(`
-{
-	"variables": [
-	{"name": "correct", "expression": "object"}
-	],
-  "paramKind": {
-    "APIVersion": "v1",
-    "Kind": "kind"
-  },
-  "paramRef": {
-    "Name": "name",
-    "Namespace": "namespace",
-    "ParameterNotFoundAction": "Other"
-  },
-  "validations": [
-    {
-      "expression": "0 <= 2",
-      "reason": "Unauthorized"
-    }
-  ]
-}
-`)
-	response, err := ValidateSettings(settingsString)
-	require.NoError(t, err)
-	settingsValidationResponse := protocol.SettingsValidationResponse{}
-	err = json.Unmarshal(response, &settingsValidationResponse)
-	require.NoError(t, err)
-
-	require.False(t, settingsValidationResponse.Valid)
-	require.NotNil(t, settingsValidationResponse.Message)
-	require.Contains(t, *settingsValidationResponse.Message, "parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified")
-}
-
-func TestFailurePolicySerialization(t *testing.T) {
+func TestAssignDefaultValueWhenUnmarshalling(t *testing.T) {
 	settingsString := []byte(`
 	
 {

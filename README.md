@@ -34,38 +34,27 @@ For more information about variables and validation expressions, please refer to
 
 #### Parameters
 
-It's possible to configure the policy to read parameters from other resources
-available in the cluster, similar to how the native Kubernetes
-[ValidatingAdmissionPolicy](https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/#parameter-resources)
-works. This allows the values used for validation to be split from the policy's
-logic.
+This policy can read parameters from other cluster resources to separate
+validation logic from its values, much like Kubernetes' native
+[ValidatingAdmissionPolicy](https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/#parameter-resources).
 
-The cel-policy uses two fields for this purpose: `paramKind` and `paramRef`.
-They function identically to their Kubernetes counterparts.
+The policy uses two fields for this purpose:
 
-- `paramKind`: Defines the kind of resource to be used as a parameter (e.g.,
-  `ConfigMap`).
-- `paramRef`: Specifies how to find the parameter resource(s). It can find
-  resources by name or by a labelSelector, but you cannot use both at the same
-  time.
+- `paramKind`: Defines the resource type to use as a parameter, such as a
+  `ConfigMap`.
+- `paramRef`: Specifies how to find the parameter resource by its name or a
+  label selector. time.
 
-In standard Kubernetes policies, `paramKind` is defined in the
-ValidatingAdmissionPolicy resource, while `paramRef` is defined in the
-ValidatingAdmissionPolicyBinding. However, the cel-policy simplifies this by
-defining both fields directly within the policy settings, as there is no such
-separation.
+Unlike in native Kubernetes where these are separate, both fields are defined
+directly within this policy's settings.
 
-The `paramRef` field also contains a setting called `parameterNotFoundAction`,
-which controls the policy's behavior when a specified parameter resource cannot
-be found. If `parameterNotFoundAction` is set to `Deny`, the outcome then
-depends on the `failurePolicy` setting. To mirror the native Kubernetes
-behavior, the Kubewarden cel-policy also includes the `failurePolicy` field in
-its settings. The `failurePolicy` settins is optional. And, its default values
-is `Fail`.
+The `paramRef.parameterNotFoundAction` setting controls behavior when a parameter
+resource is not found. If set to `Deny`, the outcome depends on the `failurePolicy`
+setting, which defaults to `Fail`.
 
-When `paramRef` matches multiple parameter resources, the incoming request is
-validated against each one. The policy will only return an acceptance response
-if the resource is valid against all found parameters.
+If `paramRef` matches multiple resources, the incoming request is validated
+against all of them. The request will only be accepted if it is valid against
+every matched parameter.
 
 ### Example
 
@@ -91,7 +80,7 @@ spec:
     - name: replicas
       expression: "object.spec.replicas"
   validations:
-    - expression: "variables.replicas <= 5"
+    - expression: "variables.replicas <= params.data.maxreplicas"
       message: "The number of replicas must be less than or equal to 5"
 ```
 
@@ -141,7 +130,7 @@ spec:
       - name: "replicas"
         expression: "object.spec.replicas"
     validations:
-      - expression: "variables.replicas <= 5"
+      - expression: "variables.replicas <= params.data.maxreplicas"
         message: "The number of replicas must be less than or equal to 5"
   rules:
     - apiGroups: ["apps"]

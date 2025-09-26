@@ -200,7 +200,7 @@ func validateVariable(compiler *cel.Compiler, index int, variable Variable) (*ty
 		err := newInvalidValueError(fmt.Sprintf("variables[%d].name", index), variable.Name, "name is not a valid CEL identifier")
 		result = multierror.Append(result, err)
 	case name == "params":
-		err := newInvalidValueError(fmt.Sprintf("variables[%d].name", index), variable.Name, "'params' name is not allowed. It can conflicts with the 'params' from the policy paramaters configuration")
+		err := newInvalidValueError(fmt.Sprintf("variables[%d].name", index), variable.Name, "'params' name is not allowed. It conflicts with 'params' from the policy paramaters configuration")
 		result = multierror.Append(result, err)
 	}
 
