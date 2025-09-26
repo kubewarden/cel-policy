@@ -4,14 +4,18 @@ import (
 	"encoding/json"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/kubewarden/policy-sdk-go/protocol"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/kubernetes/pkg/apis/admissionregistration"
 )
 
 // TestValidateSettings unit tests adapted from:
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/admissionregistration/validation/validation_test.go
 func TestValidateSettings(t *testing.T) {
+	otherAction := admissionregistration.ParameterNotFoundActionType("Other")
 	tests := []struct {
 		name          string
 		settings      Settings
@@ -74,6 +78,23 @@ func TestValidateSettings(t *testing.T) {
 				},
 			},
 			expectedError: `variables[0].name: Required value: name is not specified`,
+		},
+		{
+			name: "variable name cannot be 'params'",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "params",
+						Expression: "true",
+					},
+				},
+				Validations: []Validation{
+					{
+						Expression: "true",
+					},
+				},
+			},
+			expectedError: `'params' name is not allowed. It conflicts with 'params' from the policy paramaters configuration`,
 		},
 		{
 			name: "variable composition name is not a valid identifier",
@@ -159,6 +180,146 @@ func TestValidateSettings(t *testing.T) {
 			},
 			expectedError: `variables[1].expression: Invalid value: "variables.foo + 1": compilation failed: ERROR: <input>:1:10: undefined field 'foo'`,
 		},
+		{
+			name: "invalid ParamKind",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "",
+					Kind:       "",
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `paramKind must have both APIVersion and Kind specified`,
+		},
+		{
+			name: "invalid ParamRef",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Name:     "",
+					Selector: nil,
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `paramRef must have either Name or Selector specified`,
+		},
+		{
+			name: "ParamRef cannot have both Name and Selector",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Name: "my-config",
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": "my-app"},
+					},
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `paramRef cannot have both Name and Selector specified`,
+		},
+		{
+			name: "ParamRef must define a valid ParameterNotFoundAction",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Name: "my-config",
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified`,
+		},
+		{
+			name: "ParameterNotFoundAction should be 'Allow' or 'Deny'",
+			settings: Settings{
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				ParamKind: &admissionregistration.ParamKind{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ParamRef: &admissionregistration.ParamRef{
+					Name:                    "my-config",
+					ParameterNotFoundAction: &otherAction,
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `parameterNotFoundAction must be 'Deny' or 'Allow' if paramRef is specified`,
+		},
+		{
+			name: "failurePolicy allow values",
+			settings: Settings{
+				FailurePolicy: "Other",
+				Variables: []Variable{
+					{
+						Name:       "correct",
+						Expression: "object",
+					},
+				},
+				Validations: []Validation{
+					{
+						Expression: "0 > 1",
+					},
+				},
+			},
+			expectedError: `failurePolicy must be either 'Ignore' or 'Fail'`,
+		},
 	}
 
 	for _, test := range tests {
@@ -177,4 +338,26 @@ func TestValidateSettings(t *testing.T) {
 			assert.Contains(t, *settingsValidationResponse.Message, test.expectedError)
 		})
 	}
+}
+
+func TestAssignDefaultValueWhenUnmarshalling(t *testing.T) {
+	settingsString := []byte(`
+	
+{
+	"variables": [
+	{"name": "correct", "expression": "object"}
+	],
+  "validations": [
+    {
+      "expression": "0 <= 2",
+      "messageExpression": "Invalid value",
+      "reason": "Unauthorized"
+    }
+  ]
+}
+`)
+	settings := Settings{}
+	err := json.Unmarshal(settingsString, &settings)
+	require.NoError(t, err)
+	require.Equal(t, admissionregistration.Fail, settings.FailurePolicy)
 }

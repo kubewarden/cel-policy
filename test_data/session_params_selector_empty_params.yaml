@@ -1,0 +1,11 @@
+- type: Exchange
+  request: |
+    !KubernetesListResourceNamespace
+    api_version: v1
+    kind: ConfigMap
+    namespace: default
+    label_selector: app=my-app
+    field_selector: null
+  response:
+    type: Success
+    payload: '{"apiVersion":"v1","kind":"ConfigMapList","metadata":{},"items":[]}'

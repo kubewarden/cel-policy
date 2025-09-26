@@ -1,0 +1,33 @@
+- type: Exchange
+  request: |
+    !KubernetesGetResource
+    api_version: v1
+    kind: ConfigMap
+    name: my-config
+    namespace: default
+    disable_cache: false
+  response:
+    type: Success
+    payload: '{"apiVersion":"v1","kind":"ConfigMap","metadata":{"annotations":{"kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"v1\",\"data\":{\"maxreplicas\":\"50\"},\"kind\":\"ConfigMap\",\"metadata\":{\"annotations\":{},\"name\":\"my-config\",\"namespace\":\"default\"}}\n"},"creationTimestamp":"2025-07-18T19:55:50Z","managedFields":[{"apiVersion":"v1","fieldsType":"FieldsV1","fieldsV1":{"f:data":{".":{},"f:maxreplicas":{}},"f:metadata":{"f:annotations":{".":{},"f:kubectl.kubernetes.io/last-applied-configuration":{}}}},"manager":"kubectl-client-side-apply","operation":"Update","time":"2025-07-18T20:02:58Z"}],"name":"my-config","namespace":"default","resourceVersion":"18063","uid":"3d54a85e-ded8-4c07-99c3-0d6b97314255"},"data":{"maxreplicas":"50"}}'
+- type: Exchange
+  request: |
+    !KubernetesGetResource
+    api_version: v1
+    kind: Namespace
+    name: default
+    namespace: null
+    disable_cache: false
+  response:
+    type: Success
+    payload: '{"apiVersion":"v1","kind":"Namespace","metadata":{"creationTimestamp":"2025-07-18T14:07:54Z","labels":{"kubernetes.io/metadata.name":"default"},"managedFields":[{"apiVersion":"v1","fieldsType":"FieldsV1","fieldsV1":{"f:metadata":{"f:labels":{".":{},"f:kubernetes.io/metadata.name":{}}}},"manager":"k3s","operation":"Update","time":"2025-07-18T14:07:54Z"}],"name":"default","resourceVersion":"44","uid":"4d3a34dc-fa99-42c7-bfa1-44e66ddddfc9"},"spec":{"finalizers":["kubernetes"]},"status":{"phase":"Active"}}'
+- type: Exchange
+  request: |
+    !KubernetesGetResource
+    api_version: v1
+    kind: ConfigMap
+    name: my-config
+    namespace: default
+    disable_cache: false
+  response:
+    type: Success
+    payload: '{"apiVersion":"v1","kind":"ConfigMap","metadata":{"annotations":{"kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"v1\",\"data\":{\"maxreplicas\":\"50\"},\"kind\":\"ConfigMap\",\"metadata\":{\"annotations\":{},\"name\":\"my-config\",\"namespace\":\"default\"}}\n"},"creationTimestamp":"2025-07-18T19:55:50Z","managedFields":[{"apiVersion":"v1","fieldsType":"FieldsV1","fieldsV1":{"f:data":{".":{},"f:maxreplicas":{}},"f:metadata":{"f:annotations":{".":{},"f:kubectl.kubernetes.io/last-applied-configuration":{}}}},"manager":"kubectl-client-side-apply","operation":"Update","time":"2025-07-18T20:02:58Z"}],"name":"my-config","namespace":"default","resourceVersion":"18063","uid":"3d54a85e-ded8-4c07-99c3-0d6b97314255"},"data":{"maxreplicas":"50"}}'

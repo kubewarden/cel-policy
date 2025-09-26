@@ -5,7 +5,7 @@ BIN_DIR := $(abspath $(ROOT_DIR)/bin)
 SOURCE_FILES := $(shell find . -type f -name '*.go')
 VERSION ?= $(shell git describe | cut -c2-)
 
-GOLANGCI_LINT_VER := v2.1.6
+GOLANGCI_LINT_VER := v2.5.0
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(BIN_DIR)/$(GOLANGCI_LINT_BIN)
 
@@ -45,5 +45,8 @@ clean:
 	rm -f policy.wasm annotated-policy.wasm
 
 .PHONY: e2e-tests
-e2e-tests: annotated-policy.wasm
+e2e-tests: policy.wasm
+	# The policy annonation uses a different metadata file for testing because the 
+	# e2e tests require access to ConfigMap to test the parameters feature.
+	kwctl annotate -m test_data/metadata.yml -u README.md -o annotated-policy.wasm policy.wasm
 	bats e2e.bats
