@@ -74,7 +74,7 @@
 
   [ "$status" -eq 0 ]
   [ $(expr "$output" : '.*allowed.*false') -ne 0 ]
-  [ $(expr "$output" : '.*failed to get params for perform policy evaluation: no parameters found*') -ne 0 ]
+  [ $(expr "$output" : '.*failed to get params for performing policy evaluation: no parameters found*') -ne 0 ]
   [ $(expr "$output" : '.*code.*400') -ne 0 ]
 }
 

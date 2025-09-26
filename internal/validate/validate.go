@@ -14,7 +14,6 @@ import (
 	"github.com/kubewarden/cel-policy/internal/settings"
 	kubewarden "github.com/kubewarden/policy-sdk-go"
 	"github.com/kubewarden/policy-sdk-go/protocol"
-	"k8s.io/kubernetes/pkg/apis/admissionregistration"
 )
 
 const (
@@ -90,7 +89,7 @@ func Validate(payload []byte) ([]byte, error) {
 
 	paramsList, err := getEvaluationParams(validationRequest, requestMap)
 	if err != nil {
-		return handleFailureInParamsRetrival(validationRequest, err.Error())
+		return handleFailureInParamsRetrieval(validationRequest, err.Error())
 	}
 
 	if err = evalVariables(compiler, vars, validationRequest.Settings.Variables); err != nil {
@@ -98,115 +97,22 @@ func Validate(payload []byte) ([]byte, error) {
 	}
 
 	if len(paramsList) > 0 {
-		return evalValidationsAgainstParamsList(
+		response, err := evalValidationsAgainstParamsList(
 			compiler,
 			vars,
 			paramsList,
 			validationRequest.Settings.Validations)
-	}
-
-	return evalValidations(compiler, vars, validationRequest.Settings.Validations)
-}
-
-func handleFailureInParamsRetrival(validationRequest ValidationRequest, errorMessage string) ([]byte, error) {
-	// Kubernetes just accept the request when parameterNotFoundAction is Allow.
-	// https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/#paramref
-	if *validationRequest.Settings.ParamRef.ParameterNotFoundAction == admissionregistration.AllowAction || validationRequest.Settings.FailurePolicy == admissionregistration.Ignore {
-		return kubewarden.AcceptRequest()
-	}
-	message := kubewarden.Message(fmt.Sprintf("failed to get params for perform policy evaluation: %s", errorMessage))
-	return kubewarden.RejectRequest(message, reasonToStatusCode(settings.StatusReasonInvalid))
-}
-
-// Function that get all the parameters selected by the selector in the paramRef
-// and evaluate all the validations against each of the parameters.
-func evalValidationAgaistParamsList(compiler *cel.Compiler, vars map[string]any, validationRequest ValidationRequest, requestMap map[string]any) ([]byte, error) {
-	paramsItems, err := getParamsBySelector(validationRequest, requestMap)
-	if err != nil || len(paramsItems) == 0 {
-		errorMessage := "no parameters found"
-		if err != nil {
-			errorMessage = err.Error()
-		}
-		return handleFailureInParamsRetrival(validationRequest, errorMessage)
-	}
-
-	if err := evalVariables(compiler, vars, validationRequest.Settings.Variables); err != nil {
-		return nil, fmt.Errorf("failed to evaluate variables: %w", err)
-	}
-
-	for _, item := range paramsItems {
-		vars["params"] = func() ref.Val {
-			return types.NewDynamicMap(types.DefaultTypeAdapter, item)
-		}
-		for _, validation := range validationRequest.Settings.Validations {
-			message, reason, err := evaluateValidation(compiler, vars, validation)
-			if err != nil {
-				return nil, errors.Join(errors.New("failed to evaluate validation"), err)
-			}
-			if message != "" {
-				return kubewarden.RejectRequest(message, reason)
-			}
-		}
-	}
-	return kubewarden.AcceptRequest()
-}
-
-func hasParamsRefSelector(validationRequest ValidationRequest) bool {
-	return validationRequest.Settings.ParamRef != nil && validationRequest.Settings.ParamRef.Selector != nil
-}
-
-func hasParamsNameSelector(validationRequest ValidationRequest) bool {
-	return validationRequest.Settings.ParamRef != nil && validationRequest.Settings.ParamRef.Name != ""
-}
-
-func getEvaluationParams(validationRequest ValidationRequest, requestMap map[string]any) ([]any, error) {
-	if hasParamsRefSelector(validationRequest) {
-		return getParamsBySelector(validationRequest, requestMap)
-	}
-
-	if hasParamsNameSelector(validationRequest) {
-		param, err := getParamsByName(validationRequest, requestMap)
 		if err != nil {
 			return nil, err
 		}
-		return []any{param}, nil
+		return json.Marshal(response)
 	}
 
-	return []any{}, nil
-}
-
-// Function used to get the namespace, apiVersion and kind of the resource to fetch
-// the parameters from. If the ParamRef.Namespace is not set, the namespace of the
-// request being validated is used.
-//
-// This is the same behavior as in ValidatingAdmissionPolicy
-// https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/#per-namespace-parameters
-func getResourceInfo(validationRequest ValidationRequest, requestMap map[string]any) (string, string, string) {
-	namespace := validationRequest.Settings.ParamRef.Namespace
-	if namespace == "" {
-		namespace, _ = requestMap["namespace"].(string)
-	}
-	apiVersion := validationRequest.Settings.ParamKind.APIVersion
-	kind := validationRequest.Settings.ParamKind.Kind
-	return namespace, apiVersion, kind
-}
-
-func getParamsByName(validationRequest ValidationRequest, requestMap map[string]any) (any, error) {
-	name := validationRequest.Settings.ParamRef.Name
-	namespace, apiVersion, kind := getResourceInfo(validationRequest, requestMap)
-	return getKubernetesResource(name, namespace, apiVersion, kind)
-}
-
-func getParamsBySelector(validationRequest ValidationRequest, requestMap map[string]any) ([]any, error) {
-	namespace, apiVersion, kind := getResourceInfo(validationRequest, requestMap)
-	params, err := getKubernetesResourceList(namespace, apiVersion, kind, validationRequest.Settings.ParamRef.Selector)
+	response, err := evalValidations(compiler, vars, validationRequest.Settings.Validations)
 	if err != nil {
 		return nil, err
 	}
-	if len(params) == 0 {
-		return nil, fmt.Errorf("no parameters found")
-	}
-	return params, nil
+	return json.Marshal(response)
 }
 
 func evalVariables(compiler *cel.Compiler, vars map[string]interface{}, variables []settings.Variable) error {
@@ -233,7 +139,23 @@ func evalVariables(compiler *cel.Compiler, vars map[string]interface{}, variable
 	return nil
 }
 
-func evalValidations(compiler *cel.Compiler, vars map[string]interface{}, validations []settings.Validation) ([]byte, error) {
+func buildAcceptResponse() *protocol.ValidationResponse {
+	return &protocol.ValidationResponse{
+		Accepted: true,
+	}
+}
+
+func buildRejectResponse(message kubewarden.Message, code kubewarden.Code) *protocol.ValidationResponse {
+	messageStr := string(message)
+	codeUint16 := uint16(code)
+	return &protocol.ValidationResponse{
+		Accepted: false,
+		Message:  &messageStr,
+		Code:     &codeUint16,
+	}
+}
+
+func evalValidations(compiler *cel.Compiler, vars map[string]interface{}, validations []settings.Validation) (*protocol.ValidationResponse, error) {
 	for _, validation := range validations {
 		message, reason, err := evaluateValidation(compiler, vars, validation)
 		if err != nil {
@@ -241,30 +163,10 @@ func evalValidations(compiler *cel.Compiler, vars map[string]interface{}, valida
 		}
 
 		if message != "" {
-			return kubewarden.RejectRequest(message, reason)
+			return buildRejectResponse(message, reason), nil
 		}
 	}
-	return kubewarden.AcceptRequest()
-}
-
-func evalValidationsAgainstParamsList(compiler *cel.Compiler, vars map[string]interface{}, paramsList []interface{}, validations []settings.Validation) ([]byte, error) {
-	for _, params := range paramsList {
-		vars["params"] = func() ref.Val {
-			return types.NewDynamicMap(types.DefaultTypeAdapter, params)
-		}
-
-		for _, validation := range validations {
-			message, reason, err := evaluateValidation(compiler, vars, validation)
-			if err != nil {
-				return nil, err
-			}
-
-			if message != "" {
-				return kubewarden.RejectRequest(message, reason)
-			}
-		}
-	}
-	return kubewarden.AcceptRequest()
+	return buildAcceptResponse(), nil
 }
 
 // evaluateValidation evaluates a single validation expression.
