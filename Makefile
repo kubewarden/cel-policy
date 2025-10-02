@@ -9,6 +9,8 @@ GOLANGCI_LINT_VER := v2.5.0
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(BIN_DIR)/$(GOLANGCI_LINT_BIN)
 
+E2E_TEST_ANNONATION_METADATA ?= "test_data/annotation-metadata.yml"
+
 
 policy.wasm: $(SOURCE_FILES) go.mod go.sum
 	GOOS=wasip1 GOARCH=wasm go build -gcflags=all="-l -B -wb=false" -ldflags="-w -s" -o policy.wasm
@@ -48,5 +50,6 @@ clean:
 e2e-tests: policy.wasm
 	# The policy annonation uses a different metadata file for testing because the 
 	# e2e tests require access to ConfigMap to test the parameters feature.
-	kwctl annotate -m test_data/metadata.yml -u README.md -o annotated-policy.wasm policy.wasm
+	yq eval-all 'select(fileIndex == 0) *+? select(fileIndex == 1)' metadata.yml test_data/metadata.yml > $(E2E_TEST_ANNONATION_METADATA)
+	kwctl annotate -m $(E2E_TEST_ANNONATION_METADATA) -u README.md -o annotated-policy.wasm policy.wasm
 	bats e2e.bats
