@@ -47,7 +47,7 @@ func TestPerNamespaceParameter(t *testing.T) {
 			kind:       "ConfigMap",
 		},
 		{
-			name: "paramref with namspace should use it instead of request namespace",
+			name: "paramref with namespace should use it instead of request namespace",
 			settings: settings.Settings{
 				ParamKind: &admissionregistration.ParamKind{
 					APIVersion: "v1",
