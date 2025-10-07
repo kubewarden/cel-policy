@@ -90,5 +90,5 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.34.1
-	k8s.io/kubernetes v1.33.3
+	k8s.io/kubernetes v1.33.4
 )
