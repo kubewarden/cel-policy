@@ -105,7 +105,19 @@ spec:
         environment: test
 ```
 
-the Kubewarden CEL policy can be written as follows:
+The `ConfigMap` used as parameter resource is:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-params
+  namespace: default
+data:
+  maxreplicas: "5"
+```
+
+The Kubewarden CEL policy can be written as follows:
 
 ```yaml
 apiVersion: policies.kubewarden.io/v1
