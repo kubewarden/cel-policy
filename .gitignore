@@ -21,3 +21,6 @@
 go.work
 
 *.wasm
+
+# Metadata file generated when running e2e tests.
+test_data/annotation-metadata.yml

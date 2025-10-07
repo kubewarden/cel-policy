@@ -64,7 +64,7 @@ func Validate(payload []byte) ([]byte, error) {
 	}
 
 	requestMap := map[string]interface{}{}
-	if err := json.Unmarshal(validationRequest.Request, &requestMap); err != nil {
+	if err = json.Unmarshal(validationRequest.Request, &requestMap); err != nil {
 		return nil, fmt.Errorf("cannot unmarshal request %w", err)
 	}
 
@@ -87,11 +87,32 @@ func Validate(payload []byte) ([]byte, error) {
 		},
 	}
 
+	paramsList, err := getEvaluationParams(validationRequest, requestMap)
+	if err != nil {
+		return handleFailureInParamsRetrieval(validationRequest, err.Error())
+	}
+
 	if err = evalVariables(compiler, vars, validationRequest.Settings.Variables); err != nil {
 		return nil, fmt.Errorf("failed to evaluate variables: %w", err)
 	}
 
-	return evalValidations(compiler, vars, validationRequest.Settings.Validations)
+	if len(paramsList) > 0 {
+		response, err := evalValidationsAgainstParamsList(
+			compiler,
+			vars,
+			paramsList,
+			validationRequest.Settings.Validations)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(response)
+	}
+
+	response, err := evalValidations(compiler, vars, validationRequest.Settings.Validations)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(response)
 }
 
 func evalVariables(compiler *cel.Compiler, vars map[string]interface{}, variables []settings.Variable) error {
@@ -118,37 +139,52 @@ func evalVariables(compiler *cel.Compiler, vars map[string]interface{}, variable
 	return nil
 }
 
-func evalValidations(compiler *cel.Compiler, vars map[string]interface{}, validations []settings.Validation) ([]byte, error) {
+func evalValidations(compiler *cel.Compiler, vars map[string]interface{}, validations []settings.Validation) (*protocol.ValidationResponse, error) {
 	for _, validation := range validations {
-		ast, err := compiler.CompileCELExpression(validation.Expression)
+		response, err := evaluateValidation(compiler, vars, validation)
 		if err != nil {
-			return nil, fmt.Errorf("failed to compile expression: %w", err)
+			return nil, err
 		}
 
-		val, err := compiler.EvalCELExpression(vars, ast)
-		if err != nil {
-			return nil, fmt.Errorf("failed to evaluate expression: %w", err)
-		}
-
-		if val == types.False {
-			reason := reasonToStatusCode(validation.Reason)
-
-			if validation.MessageExpression != "" {
-				message, err := evalMessageExpression(compiler, vars, validation.MessageExpression)
-				if err != nil {
-					return nil, fmt.Errorf("failed to evaluate message expression: %w", err)
-				}
-				return kubewarden.RejectRequest(kubewarden.Message(message), reason)
-			}
-			if validation.Message != "" {
-				return kubewarden.RejectRequest(kubewarden.Message(validation.Message), reason)
-			}
-
-			return kubewarden.RejectRequest(kubewarden.Message(fmt.Sprintf("failed expression: %s", strings.TrimSpace(validation.Expression))), reason)
+		if !response.Accepted {
+			return response, nil
 		}
 	}
+	return buildAcceptResponse(), nil
+}
 
-	return kubewarden.AcceptRequest()
+// evaluateValidation evaluates a single validation expression.
+// If the expression evaluates to false, it returns a rejection message and code.
+// If the expression evaluates to true, it returns empty message and code 0.
+func evaluateValidation(compiler *cel.Compiler, vars map[string]any, validation settings.Validation) (*protocol.ValidationResponse, error) {
+	ast, err := compiler.CompileCELExpression(validation.Expression)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile expression: %w", err)
+	}
+
+	val, err := compiler.EvalCELExpression(vars, ast)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate expression: %w", err)
+	}
+
+	if val == types.False {
+		reason := reasonToStatusCode(validation.Reason)
+
+		if validation.MessageExpression != "" {
+			message, err := evalMessageExpression(compiler, vars, validation.MessageExpression)
+			if err != nil {
+				return nil, fmt.Errorf("failed to evaluate message expression: %w", err)
+			}
+			return buildRejectResponse(kubewarden.Message(message), reason), nil
+		}
+		if validation.Message != "" {
+			return buildRejectResponse(kubewarden.Message(validation.Message), reason), nil
+		}
+
+		return buildRejectResponse(kubewarden.Message(fmt.Sprintf("failed expression: %s", strings.TrimSpace(validation.Expression))), reason), nil
+	}
+
+	return buildAcceptResponse(), nil
 }
 
 func evalMessageExpression(compiler *cel.Compiler, vars map[string]interface{}, messageExpression string) (string, error) {
@@ -187,4 +223,20 @@ func reasonToStatusCode(reason string) kubewarden.Code {
 	}
 
 	return statusCode
+}
+
+func buildAcceptResponse() *protocol.ValidationResponse {
+	return &protocol.ValidationResponse{
+		Accepted: true,
+	}
+}
+
+func buildRejectResponse(message kubewarden.Message, code kubewarden.Code) *protocol.ValidationResponse {
+	messageStr := string(message)
+	codeUint16 := uint16(code)
+	return &protocol.ValidationResponse{
+		Accepted: false,
+		Message:  &messageStr,
+		Code:     &codeUint16,
+	}
 }

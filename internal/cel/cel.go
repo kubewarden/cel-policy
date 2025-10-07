@@ -62,6 +62,7 @@ func NewCompiler() (*Compiler, error) {
 		/// See: https://github.com/google/cel-go/issues/885
 		cel.Variable("request", cel.DynType),
 		cel.Variable("namespaceObject", cel.DynType),
+		cel.Variable("params", cel.DynType),
 
 		// Kubewarden host capabilities libraries
 		library.Kubernetes(),
