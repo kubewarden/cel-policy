@@ -2,7 +2,7 @@ module github.com/kubewarden/cel-policy
 
 go 1.25.0
 
-toolchain go1.25.1
+toolchain go1.25.3
 
 require (
 	github.com/google/cel-go v0.26.1
@@ -84,11 +84,11 @@ require (
 	github.com/wapc/wapc-guest-tinygo v0.3.3 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/text v0.23.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20241209162323-e6fa225c2576 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250303144028-a0af3efb3deb // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.34.1
-	k8s.io/kubernetes v1.33.4
+	k8s.io/kubernetes v1.34.1
 )
