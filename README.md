@@ -21,6 +21,7 @@ The policy provides the following variables:
 - `object`: the Kubernetes resource being validated
 - `oldObject`: the Kubernetes resource before the update, nil if the request is not an update
 - `namespaceObject`: the namespace of the resource being validated
+- `params`: the parameters found when `paramKind` and `paramRef` is defined.
 
 The policy will be evaluated as `allowed` if all the CEL expressions are evaluated as `true`.
 It is required that the validations expression is a boolean, otherwise the policy will not pass the settings validation phase.
@@ -30,6 +31,30 @@ The `messageExpression` will be evaluated as a CEL expression, and the result wi
 It is required that the message expression is a string, otherwise the policy will not pass the settings validation phase.
 
 For more information about variables and validation expressions, please refer to the [ValidatingAdmissionPolicy Kubernetes resource](https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/).
+
+#### Parameters
+
+This policy can read parameters from other cluster resources to separate
+validation logic from its values, much like Kubernetes' native
+[ValidatingAdmissionPolicy](https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/#parameter-resources).
+
+The policy uses two fields for this purpose:
+
+- `paramKind`: Defines the resource type to use as a parameter, such as a
+  `ConfigMap`.
+- `paramRef`: Specifies how to find the parameter resource by its name or a
+  label selector. time.
+
+Unlike in native Kubernetes where these are separate, both fields are defined
+directly within this policy's settings.
+
+The `paramRef.parameterNotFoundAction` setting controls behavior when a parameter
+resource is not found. If set to `Deny`, the outcome depends on the `failurePolicy`
+setting, which defaults to `Fail`.
+
+If `paramRef` matches multiple resources, the incoming request is validated
+against all of them. The request will only be accepted if it is valid against
+every matched parameter.
 
 ### Example
 
@@ -42,6 +67,9 @@ metadata:
   name: "demo-policy.example.com"
 spec:
   failurePolicy: Fail
+  paramKind:
+    apiVersion: v1
+    kind: ConfigMap
   matchConstraints:
     resourceRules:
       - apiGroups: ["apps"]
@@ -52,11 +80,44 @@ spec:
     - name: replicas
       expression: "object.spec.replicas"
   validations:
-    - expression: "variables.replicas <= 5"
+    - expression: "variables.replicas <= params.data.maxreplicas"
       message: "The number of replicas must be less than or equal to 5"
 ```
 
-the Kubewarden CEL policy can be written as follows:
+Let's consider the following example `ValidatingAdmissionPolicyBinding` with
+`paramRef`:
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "demo-policy-binding.example.com"
+spec:
+  policyName: "demo-policy.example.com"
+  validationActions: [Deny]
+  paramRef:
+    name: "my-params"
+    namespace: "default"
+    parameterNotFoundAction: Deny
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        environment: test
+```
+
+The `ConfigMap` used as parameter resource is:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-params
+  namespace: default
+data:
+  maxreplicas: "5"
+```
+
+The Kubewarden CEL policy can be written as follows:
 
 ```yaml
 apiVersion: policies.kubewarden.io/v1
@@ -69,11 +130,19 @@ metadata:
 spec:
   module: registry://ghcr.io/kubewarden/policies/cel-policy:latest
   settings:
+    failurePolicy: Fail # this settings is optional. When not defined, the default value is `Fail`
+    paramKind:
+      apiVersion: v1
+      kind: ConfigMap
+    paramRef:
+      name: "my-params"
+      namespace: "default"
+      parameterNotFoundAction: Deny
     variables:
       - name: "replicas"
         expression: "object.spec.replicas"
     validations:
-      - expression: "variables.replicas <= 5"
+      - expression: "variables.replicas <= params.data.maxreplicas"
         message: "The number of replicas must be less than or equal to 5"
   rules:
     - apiGroups: ["apps"]
