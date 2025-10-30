@@ -91,3 +91,17 @@
   [ "$status" -eq 0 ]
   [ $(expr "$output" : '.*allowed.*true') -ne 0 ]
 }
+
+@test "reject because of type error" {
+  run kwctl run annotated-policy.wasm \
+    --allow-context-aware \
+    --replay-host-capabilities-interactions test_data/session.yaml \
+    --request-path test_data/deployment_gt_max_replicas.json \
+    --settings-path test_data/settings_type_error.json
+
+  # this prints the output when one the checks below fails
+  echo "output = ${output}"
+
+  [ "$status" -eq 1 ]
+  [ $(expr "$output" : ".*found no matching overload for '_+_' applied to '(string, int).*") -ne 0 ]
+}
