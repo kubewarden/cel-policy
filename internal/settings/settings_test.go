@@ -53,7 +53,12 @@ func TestValidateSettings(t *testing.T) {
 			settings: Settings{
 				Validations: []Validation{{Expression: "object.x in [1, 2, "}},
 			},
-			expectedError: `validations[0].expression: Invalid value: "object.x in [1, 2, ": compilation failed: ERROR: <input>:1:20: Syntax error: missing ']' at '<EOF>`,
+			expectedError: `The settings are invalid: 1 error occurred:
+	* validations[0].expression: Invalid value: "object.x in [1, 2, ": ERROR: <input>:1:20: Syntax error: missing ']' at '<EOF>'
+ | object.x in [1, 2, 
+ | ...................^:
+
+`,
 		},
 		{
 			name: "messageExpression of wrong type",
@@ -128,7 +133,12 @@ func TestValidateSettings(t *testing.T) {
 					},
 				},
 			},
-			expectedError: `variables[0].expression: Invalid value: "114 + '514'": compilation failed: ERROR: <input>:1:5: found no matching overload for '_+_' applied to '(int, string)`,
+			expectedError: `The settings are invalid: 1 error occurred:
+	* variables[0].expression: Invalid value: "114 + '514'": ERROR: <input>:1:5: found no matching overload for '_+_' applied to '(int, string)'
+ | 114 + '514'
+ | ....^:
+
+`,
 		},
 		{
 			name: "validation referred to non-existing variable",
@@ -153,7 +163,7 @@ func TestValidateSettings(t *testing.T) {
 				},
 			},
 
-			expectedError: `validations[1].expression: Invalid value: "variables.replicas == 2": compilation failed: ERROR: <input>:1:10: undefined field 'replicas'`,
+			expectedError: `validations[1].expression: Invalid value: "variables.replicas == 2": ERROR: <input>:1:10: undefined field 'replicas'`,
 		},
 		{
 			name: "variables wrong order",
@@ -178,7 +188,7 @@ func TestValidateSettings(t *testing.T) {
 					},
 				},
 			},
-			expectedError: `variables[1].expression: Invalid value: "variables.foo + 1": compilation failed: ERROR: <input>:1:10: undefined field 'foo'`,
+			expectedError: `variables[1].expression: Invalid value: "variables.foo + 1": ERROR: <input>:1:10: undefined field 'foo'`,
 		},
 		{
 			name: "invalid ParamKind",
