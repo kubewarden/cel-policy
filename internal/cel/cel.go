@@ -81,7 +81,7 @@ func NewCompiler() (*Compiler, error) {
 func (c *Compiler) CompileCELExpression(expression string) (*cel.Ast, error) {
 	ast, issues := c.env.Compile(expression)
 	if issues != nil && issues.Err() != nil {
-		return nil, fmt.Errorf("compilation failed: %w", issues.Err())
+		return nil, errors.New(issues.Err().Error())
 	}
 
 	return ast, nil
