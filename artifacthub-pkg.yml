@@ -4,16 +4,16 @@
 #
 # This config can be saved to its default location with:
 #   kwctl scaffold artifacthub > artifacthub-pkg.yml 
-version: 1.4.0
+version: 1.5.0
 name: cel-policy
 displayName: CEL Policy
-createdAt: 2025-10-27T15:34:45.605676448Z
+createdAt: 2025-10-31T11:57:05.337924967Z
 description: A policy that evaluates CEL expressions
 license: Apache-2.0
 homeURL: https://github.com/kubewarden/cel-policy
 containersImages:
 - name: policy
-  image: ghcr.io/kubewarden/policies/cel-policy:v1.4.0
+  image: ghcr.io/kubewarden/policies/cel-policy:v1.5.0
 keywords:
 - compliance
 - CEL
@@ -21,17 +21,17 @@ keywords:
 - Common Expression Language
 links:
 - name: policy
-  url: https://github.com/kubewarden/cel-policy/releases/download/v1.4.0/policy.wasm
+  url: https://github.com/kubewarden/cel-policy/releases/download/v1.5.0/policy.wasm
 - name: source
   url: https://github.com/kubewarden/cel-policy
 install: |
   The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
   ```console
-  kwctl pull ghcr.io/kubewarden/policies/cel-policy:v1.4.0
+  kwctl pull ghcr.io/kubewarden/policies/cel-policy:v1.5.0
   ```
   Then, generate the policy manifest and tune it to your liking. For example:
   ```console
-  kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/kubewarden/policies/cel-policy:v1.4.0
+  kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/kubewarden/policies/cel-policy:v1.5.0
   ```
 maintainers:
 - name: Kubewarden developers
