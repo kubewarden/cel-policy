@@ -12,7 +12,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.34.1
-	k8s.io/apiserver v1.34.1
+	k8s.io/apiserver v1.34.2
 )
 
 require (
