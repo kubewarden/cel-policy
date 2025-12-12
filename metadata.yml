@@ -15,7 +15,7 @@ executionMode: wasi
 backgroundAudit: true
 annotations:
   io.kubewarden.policy.title: cel-policy
-  io.kubewarden.policy.version: 1.5.1
+  io.kubewarden.policy.version: 1.5.2
   io.artifacthub.displayName: CEL Policy
   io.artifacthub.resources: Any
   io.artifacthub.keywords: compliance, CEL, ValidatingAdmissionPolicy, Common Expression Language
