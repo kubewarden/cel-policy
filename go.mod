@@ -50,6 +50,7 @@ replace (
 	k8s.io/apiserver v1.34.0 => ./third_party/k8s.io/apiserver/
 	k8s.io/apiserver v1.34.1 => ./third_party/k8s.io/apiserver/
 	k8s.io/apiserver v1.34.2 => ./third_party/k8s.io/apiserver/
+	k8s.io/apiserver v1.35.0 => ./third_party/k8s.io/apiserver/
 )
 
 replace (
@@ -69,6 +70,7 @@ replace (
 	k8s.io/apimachinery v1.34.0 => ./third_party/k8s.io/apimachinery/
 	k8s.io/apimachinery v1.34.1 => ./third_party/k8s.io/apimachinery/
 	k8s.io/apimachinery v1.34.2 => ./third_party/k8s.io/apimachinery/
+	k8s.io/apimachinery v1.35.0 => ./third_party/k8s.io/apimachinery/
 )
 
 require (
