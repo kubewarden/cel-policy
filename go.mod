@@ -12,7 +12,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.35.0
-	k8s.io/apiserver v1.34.2
+	k8s.io/apiserver v1.35.0
 )
 
 require (
@@ -51,6 +51,7 @@ replace (
 	k8s.io/apiserver v1.34.0 => ./third_party/k8s.io/apiserver/
 	k8s.io/apiserver v1.34.1 => ./third_party/k8s.io/apiserver/
 	k8s.io/apiserver v1.34.2 => ./third_party/k8s.io/apiserver/
+	k8s.io/apiserver v1.35.0 => ./third_party/k8s.io/apiserver/
 )
 
 replace (
@@ -70,6 +71,7 @@ replace (
 	k8s.io/apimachinery v1.34.0 => ./third_party/k8s.io/apimachinery/
 	k8s.io/apimachinery v1.34.1 => ./third_party/k8s.io/apimachinery/
 	k8s.io/apimachinery v1.34.2 => ./third_party/k8s.io/apimachinery/
+	k8s.io/apimachinery v1.35.0 => ./third_party/k8s.io/apimachinery/
 )
 
 require (
